@@ -1,0 +1,22 @@
+# Reglas del Proyecto: Backend con Supabase
+
+## Contexto de Archivos
+- **Esquema de Tablas:** Consulta siempre `@schema.sql` para conocer columnas y relaciones.
+- **Lógica de Servidor:** Consulta `@schema_logic.sql` para entender Triggers, Funciones (RPC) y RLS.
+- **Tipado:** Usa exclusivamente los tipos de `@supabase.ts`.
+- **Reglas de Negocio:** Lee `@documentation.md` para entender el flujo que el usuario espera.
+
+## Reglas de Codificación (Backend)
+1. **No Duplicar Lógica:** Si una validación ya existe en un Trigger de `@schema_logic.sql`, no la programes en el cliente, solo maneja el error que devuelva Supabase.
+2. **Type Safety:** Todas las consultas deben usar el tipo `Database` de `@supabase.ts`. Ejemplo: `supabase.from<Database['public']['Tables']['perfiles']['Row']>('perfiles')`.
+3. **Manejo de Errores:** Siempre utiliza bloques `try/catch` o verifica el objeto `error` de Supabase. Devuelve mensajes claros basados en los `RAISE EXCEPTION` del SQL.
+4. **Auth:** Asume que el usuario está autenticado mediante `auth.uid()` a menos que se especifique lo contrario.
+
+## Reglas de Validación (Testing)
+- Por cada función de backend creada, **DEBES** proporcionar un comando de `curl` o un script de Bash para probarla desde Git Bash.
+- Si la función es un RPC, incluye el comando: `npx supabase@latest rpc nombre_funcion --params '{"arg": "val"}'`.
+- Si requiere autenticación, indica dónde poner el JWT de prueba.
+
+## Restricciones
+- No inventes tablas que no estén en `@schema.sql`.
+- No pidas credenciales `service_role` a menos que sea estrictamente necesario para saltar RLS en procesos de admin.

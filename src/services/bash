@@ -1,0 +1,99 @@
+LogIn - Iniciar Sesión
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/token?grant_type=password' \
+-H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "mario.villarreal@ujed.mx",
+  "password": "Admin123"
+}'
+
+
+LogOut - Cerrar Sesión
+
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/logout' \
+-H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer "
+
+
+GetUser - Obtener Usuario
+curl -X GET 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/user' \
+-H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" \
+-H "Authorization: Bearer "
+
+
+Insert Row -Insetar codigo acceso
+Crear un código de Alumno
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"ALUMNO01","tipo":"ALUMNOS","rol_a_asignar":"alumno","descripcion":"Codigo para alumnos 2026","uso_maximo":-1,"fecha_expiracion":"2026-12-31T23:59:59+00:00"}'
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"Alumno02","tipo":"ALUMNOS","descripcion":"Codigo para pruebaaa alumnos 2026","uso_maximo":-1,"fecha_expiracion":"2026-12-15T23:59:59+00:00"}'
+Crear un codigo para invitado
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"Invitado01","tipo":"INVITADO","rol_a_asignar":"alumno","email_especifico": "nataliarm03@gmail.com","descripcion":"Codigo para Invitado 01","uso_maximo":1,"fecha_expiracion":"2026-04-30T23:59:59+00:00"}'
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"INVITADO2","tipo":"INVITADO","email_especifico": "andrea@gmail.com","descripcion":"Codigo para Invitado 2","uso_maximo":1,"fecha_expiracion":"2026-03-25T23:59:59+00:00"}'
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"20262026","tipo":"INVITADO","rol_a_asignar":"maestro","email_especifico": "jazmin@gmail.com","descripcion":"Codigo para Invitadooo J","uso_maximo":1,"fecha_expiracion":"2026-03-24T23:59:59+00:00"}'
+Crear un código de Maestro
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"MAESTRO01","tipo":"MAESTROS","rol_a_asignar":"alumno","descripcion":"Codigo para maestros 2026","uso_maximo":-1,"fecha_expiracion":"2026-12-31T23:59:59+00:00"}'
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"maestro02","tipo":"MAESTROS","descripcion":"Codigo para pruebaaa maestros 2026","uso_maximo":-1,"fecha_expiracion":"2026-12-15T23:59:59+00:00"}'
+
+SignUp - Registrarse
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/signup' \
+-H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "natalia@alumnos.ujed.mx",
+  "password": "Natalia123",
+  "data": {
+    "nombres": "Natalia",
+    "apellidos": "García",
+    "matricula": "1234567",
+    "codigo": "Hola"
+  }
+}'
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/signup' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Content-Type: application/json" -d '{
+  "email": "profnatalia@ujed.mx",
+  "password": "Natalia123",
+  "data": {
+    "nombres": "Natalia",
+    "apellidos": "Martinez",
+    "matricula": "",
+    "codigo": "MAESTRO01"
+  }
+}'
+
+$ curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/signup' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Content-Type: application/json" -d '{
+  "email": "andrea@gmail.com",
+  "password": "Andrea123",
+  "data": {
+    "nombres": "Andea",
+    "apellidos": "garc",
+    "matricula": "123",
+    "codigo": "INVITADO2" }
+}'
+
+UpdateUser - Actualizar contraseña
+
+curl -X PUT 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/user' \
+-H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" \
+-H "Authorization: Bearer " \
+-H "Content-Type: application/json" \
+-d '{
+  "password": "Mario123"
+}'
+
+Read all rows - Ve todas las filas de codigo_acceso
+curl 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso?select=*' \
+-H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" \
+-H "Authorization: Bearer "
+
+Admin
+eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2ZDFlYzM0LTcxM2MtNDQ3ZC05NWJjLWYwNmNmNTNiNTczYSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2ZjZW1mZGRqcHl4d2ZxcXdsa2ZiLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIzMTcxMmM5NC0yZTc4LTQzYTctOTliZC0xZWU2MTM3ZTc2NDIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc0ODk5OTU0LCJpYXQiOjE3NzQ4OTYzNTQsImVtYWlsIjoibWFyaW8udmlsbGFycmVhbEB1amVkLm14IiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzQ4OTYzNTR9XSwic2Vzc2lvbl9pZCI6IjI5M2U4NjMxLTAyZWUtNDE1MC1hODRjLTZjMWFkYjdiYThlYyIsImlzX2Fub255bW91cyI6ZmFsc2V9.OM7wntZcuqKvQqnJPOCwbQ5_jtmIi_gb2k1RQk7TAM7OmeZxAjz_mYSreB_-baVQ2WUka0ZlV81qHOgsKr9Sgw
+
+Alumno
+eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2ZDFlYzM0LTcxM2MtNDQ3ZC05NWJjLWYwNmNmNTNiNTczYSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2ZjZW1mZGRqcHl4d2ZxcXdsa2ZiLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIxYWYzZjNiZC01MzA3LTQxYzUtYTJlZC03NzE4OTRmMGYxYzgiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc0OTAwMTI2LCJpYXQiOjE3NzQ4OTY1MjYsImVtYWlsIjoibmF0YWxpYUBhbHVtbm9zLnVqZWQubXgiLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImFwZWxsaWRvcyI6IiIsImNvZGlnbyI6IkFMVU1OTzAxIiwiZW1haWwiOiJuYXRhbGlhQGFsdW1ub3MudWplZC5teCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJtYXRyaWN1bGEiOiIxMjM0NTY3Iiwibm9tYnJlcyI6IiIsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiMWFmM2YzYmQtNTMwNy00MWM1LWEyZWQtNzcxODk0ZjBmMWM4In0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzQ4OTY1MjZ9XSwic2Vzc2lvbl9pZCI6IjMwNTNiMGQ5LWVkODEtNGNlZi1iZmYyLThhOGVjODY5NWIyZiIsImlzX2Fub255bW91cyI6ZmFsc2V9.FkzKnvRQ4wH8QWLNJmWJaIq1v4whV8BUDxUnj6PRh5Csp0P5OhpKAQkXFzNYWdROMk7IDLgmHWDvt40KlTmbQw
+
+Maestro
+eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2ZDFlYzM0LTcxM2MtNDQ3ZC05NWJjLWYwNmNmNTNiNTczYSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2ZjZW1mZGRqcHl4d2ZxcXdsa2ZiLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI0YTEyNWY4MS03ZjMwLTQxNWEtYjRkNi1mNjQ3ODU5ZGRmY2MiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc0OTAwMDg2LCJpYXQiOjE3NzQ4OTY0ODYsImVtYWlsIjoicHJvZm5hdGFsaWFAdWplZC5teCIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZW1haWwiLCJwcm92aWRlcnMiOlsiZW1haWwiXX0sInVzZXJfbWV0YWRhdGEiOnsiYXBlbGxpZG9zIjoiTWFydGluZXoiLCJjb2RpZ28iOiJNQUVTVFJPMDEiLCJlbWFpbCI6InByb2ZuYXRhbGlhQHVqZWQubXgiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibWF0cmljdWxhIjoiIiwibm9tYnJlcyI6Ik5hdGFsaWEiLCJwaG9uZV92ZXJpZmllZCI6ZmFsc2UsInN1YiI6IjRhMTI1ZjgxLTdmMzAtNDE1YS1iNGQ2LWY2NDc4NTlkZGZjYyJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzc0ODk2NDg2fV0sInNlc3Npb25faWQiOiJkNjUzMjE3My1jZjNlLTQ4YjgtYmNmYS1lNzk0MjVhMGY5OWYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.ati9u9HuZZED2SBqPw_rqcE3Qn7zHdFLsTrOo6XSYaNOUd4DfRghpSi2V93lyzV1OEiyXNFZOqBQr7oqjEIypg
+
+Invitado
+eyJhbGciOiJFUzI1NiIsImtpZCI6IjE2ZDFlYzM0LTcxM2MtNDQ3ZC05NWJjLWYwNmNmNTNiNTczYSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2ZjZW1mZGRqcHl4d2ZxcXdsa2ZiLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI1YjAxZmFjOC02YWRlLTQ2YTItYjliYi05N2YwNWRmNDJhNmYiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzc0ODk5OTkxLCJpYXQiOjE3NzQ4OTYzOTEsImVtYWlsIjoibmF0YWxpYXJtMDNAZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhcGVsbGlkb3MiOiJSYW0iLCJjb2RpZ28iOiJJbnZpdGFkbzAxIiwiZW1haWwiOiJuYXRhbGlhcm0wM0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibWF0cmljdWxhIjoiIiwibm9tYnJlcyI6Ik5hdCIsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiNWIwMWZhYzgtNmFkZS00NmEyLWI5YmItOTdmMDVkZjQyYTZmIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NzQ4OTYzOTF9XSwic2Vzc2lvbl9pZCI6IjNiNmI4ZGZhLTAxOTAtNDI3ZC1hYjI1LTA4OGI2OTFkNDYyZiIsImlzX2Fub255bW91cyI6ZmFsc2V9._M0UdCh8mnF3bQO6GSMHlnxAyG07-DXguxUYbf2yY8hh1WfdHep3EiRHg5vstrJv_8x7a3Uo6bHLPzk5eT1yVA
+
+curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/rest/v1/codigo_acceso' -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" -H "Authorization: Bearer " -H "Content-Type: application/json" -d '{"codigo":"ALUMNO01","tipo":"ALUMNOS","rol_a_asignar":"alumno","descripcion":"Codigo para alumnos 2026","uso_maximo":-1,"fecha_expiracion":"2026-12-31T23:59:59+00:00"}'

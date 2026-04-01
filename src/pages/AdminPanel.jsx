@@ -172,6 +172,14 @@ export default function AdminPanel({
                     placeholder="Descripción breve"
                   />
                 </label>
+                <label className="admin-form-full">
+                  <span>URL imagen de portada (opcional)</span>
+                  <input
+                    value={formProyecto.imagen || ''}
+                    onChange={(e) => setFormProyecto((s) => ({ ...s, imagen: e.target.value }))}
+                    placeholder="https://… (tarjeta y modal de divulgación)"
+                  />
+                </label>
               </div>
               <div className="admin-form-actions">
                 <button type="button" className="btn btn-primary admin-v2-btn-primary" onClick={addProyecto}>

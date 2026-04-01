@@ -35,7 +35,8 @@ const BASE_ENTRIES = [
   },
   { page: 'instrumentos', terms: ['instrumentos', 'test', 'herramientas', 'opciones'] },
   { page: 'interes', terms: ['interes', 'interés', 'enlaces', 'recursos', 'video', 'videos', 'youtube'] },
-  { page: 'login', terms: ['login', 'sesion', 'sesión', 'admin', 'entrar', 'acceso'] },
+  { page: 'login', terms: ['login', 'sesion', 'sesión', 'admin', 'entrar', 'acceso', 'ingresar'] },
+  { page: 'registro', terms: ['registrar', 'registrate', 'regístrate', 'crear cuenta', 'signup', 'alta'] },
 ]
 
 function extraTermsForInstrument(key) {

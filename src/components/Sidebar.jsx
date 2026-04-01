@@ -159,20 +159,22 @@ export default function Sidebar({
           <div className="sidebar-footer">
             {user ? (
               <>
-                <button
-                  type="button"
-                  className="sidebar-link sidebar-admin"
-                  onClick={() => onNavigate('admin')}
-                >
-                  Panel Admin
-                </button>
+                {user.isAdmin ? (
+                  <button
+                    type="button"
+                    className="sidebar-link sidebar-admin"
+                    onClick={() => onNavigate('admin')}
+                  >
+                    Panel Admin
+                  </button>
+                ) : null}
                 <button type="button" className="sidebar-link sidebar-logout" onClick={onLogout}>
                   Cerrar sesión
                 </button>
               </>
             ) : (
               <button type="button" className="sidebar-link sidebar-login" onClick={() => onNavigate('login')}>
-                Inicio de sesión
+                Ingresar
               </button>
             )}
           </div>

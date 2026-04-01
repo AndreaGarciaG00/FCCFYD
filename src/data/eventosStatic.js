@@ -1,0 +1,67 @@
+/** Datos de ejemplo; `imagen` puede ser URL absoluta o ruta pública. Sustituir por `publicaciones` cuando conectes BD. */
+
+const IMG = (seed) => `https://picsum.photos/seed/fccfyd-${seed}/320/200`
+
+export const EVENTOS_STATIC = [
+  {
+    id: 'e1',
+    titulo: 'Semana de la investigación FCCFyD',
+    fechaISO: '2026-05-12',
+    hora: '09:00 – 14:00 h',
+    lugar: 'Facultad · CIMOHU',
+    badge: 'Jornada',
+    imagen: IMG('e1'),
+    resumen:
+      'Pósters, charlas y líneas de trabajo. Entrada libre para la comunidad universitaria.',
+    linkLabel: null,
+    linkUrl: null,
+  },
+  {
+    id: 'e2',
+    titulo: 'Taller: instrumentos de evaluación del movimiento',
+    fechaISO: '2026-06-03',
+    hora: '11:00 h',
+    lugar: 'Laboratorio CIMOHU',
+    badge: 'Taller',
+    imagen: IMG('e2'),
+    resumen: 'Protocolos de captura y análisis de datos. Cupo limitado.',
+    linkLabel: null,
+    linkUrl: null,
+  },
+  {
+    id: 'e3',
+    titulo: 'Coloquio: divulgación en educación física',
+    fechaISO: '2026-09-18',
+    hora: '17:00 h',
+    lugar: 'Auditorio FCCFyD',
+    badge: 'Coloquio',
+    imagen: IMG('e3'),
+    resumen: 'Mesa redonda con docentes e investigadores.',
+    linkLabel: null,
+    linkUrl: null,
+  },
+  {
+    id: 'e4',
+    titulo: 'Cierre de ciclo de servicio social',
+    fechaISO: '2025-11-28',
+    hora: '10:00 h',
+    lugar: 'Coordinación de investigación',
+    badge: 'Interno',
+    imagen: IMG('e4'),
+    resumen: 'Reconocimiento a estudiantes del semestre.',
+    linkLabel: null,
+    linkUrl: null,
+  },
+  {
+    id: 'e5',
+    titulo: 'Puertas abiertas CIMOHU',
+    fechaISO: '2025-10-08',
+    hora: '09:00 – 13:00 h',
+    lugar: 'Instalaciones CIMOHU',
+    badge: 'Jornada',
+    imagen: IMG('e5'),
+    resumen: 'Recorridos y orientación para alumnos.',
+    linkLabel: null,
+    linkUrl: null,
+  },
+]

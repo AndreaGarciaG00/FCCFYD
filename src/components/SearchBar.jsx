@@ -1,7 +1,23 @@
 import { useState, useCallback } from 'react'
 
-export default function SearchBar({ className = '', onSearch }) {
-  const [query, setQuery] = useState('')
+export default function SearchBar({
+  className = '',
+  onSearch,
+  placeholder = 'Buscar secciones…',
+  ariaLabel = 'Buscar en el sitio',
+  value,
+  onChange,
+}) {
+  const [inner, setInner] = useState('')
+  const query = value !== undefined ? value : inner
+
+  const handleChange = useCallback(
+    (e) => {
+      if (value === undefined) setInner(e.target.value)
+      onChange?.(e)
+    },
+    [value, onChange],
+  )
 
   const runSearch = useCallback(
     (e) => {
@@ -30,10 +46,10 @@ export default function SearchBar({ className = '', onSearch }) {
       <input
         type="search"
         className="site-search__input"
-        placeholder="Buscar secciones…"
-        aria-label="Buscar en el sitio"
+        placeholder={placeholder}
+        aria-label={ariaLabel}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={handleChange}
       />
     </form>
   )

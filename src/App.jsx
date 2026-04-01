@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import './App.css'
 import Navbar from './components/Navbar.jsx'
 import Sidebar from './components/Sidebar.jsx'
@@ -6,10 +6,24 @@ import DetailModal from './components/DetailModal.jsx'
 import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
 import Interes from './pages/Interes.jsx'
+import Eventos from './pages/Eventos.jsx'
+import DivulgacionCientifica from './pages/DivulgacionCientifica.jsx'
 import AdminPanel from './pages/AdminPanel.jsx'
+import InstrumentoDetail from './components/InstrumentoDetail.jsx'
 import { INSTRUMENTOS_LIST as INITIAL_INSTRUMENTOS } from './data/instrumentos.js'
 import { VIDEOS_INTERES as INITIAL_VIDEOS } from './data/videosInteres.js'
 import { getSearchEntries, resolveSiteSearch } from './data/siteSearch.js'
+import supabase from './supabase.js'
+import { authService } from './services/authServives.js'
+import { profileService } from './services/profileService.js'
+import { docentesService } from './services/docentesService.js'
+import { proyectosInvestigacionService } from './services/proyectosInvestigacionService.js'
+import {
+  docenteRowToIntegranteUi,
+  splitNombreCompleto,
+  syntheticDocenteCorreo,
+  slugifyDocenteKey,
+} from './utils/integrantesMap.js'
 
 function parseYoutubeId(raw) {
   const s = String(raw || '').trim()
@@ -18,16 +32,46 @@ function parseYoutubeId(raw) {
   return m ? m[1] : ''
 }
 
-const ADMIN_EMAIL = 'admin@cimohu.edu.mx'
-const ADMIN_PASSWORD = 'cimohu2025'
-
 const ICON_MAP = { flask: '🧪', chip: '⚙️', leaf: '🌿', book: '📚' }
 
+const COVER = (seed) => `https://picsum.photos/seed/fccfyd-div-${seed}/480/320`
 const INITIAL_PROYECTOS = [
-  { id: '1', title: 'Innovación en Biotecnología', cat: 'Ciencias de la Salud', status: 'En curso', icon: 'flask', desc: 'Líneas de investigación y proyectos activos en esta área.' },
-  { id: '2', title: 'Inteligencia Artificial Aplicada', cat: 'Tecnología', status: 'En curso', icon: 'chip', desc: 'Líneas de investigación y proyectos activos en esta área.' },
-  { id: '3', title: 'Sostenibilidad Ambiental', cat: 'Ciencias Ambientales', status: 'En curso', icon: 'leaf', desc: 'Líneas de investigación y proyectos activos en esta área.' },
-  { id: '4', title: 'Educación e Innovación Pedagógica', cat: 'Ciencias de la Educación', status: 'Planificación', icon: 'book', desc: 'Líneas de investigación y proyectos activos en esta área.' },
+  {
+    id: '1',
+    title: 'Innovación en Biotecnología',
+    cat: 'Ciencias de la Salud',
+    status: 'En curso',
+    icon: 'flask',
+    desc: 'Líneas de investigación y proyectos activos en esta área.',
+    imagen: COVER('bio'),
+  },
+  {
+    id: '2',
+    title: 'Inteligencia Artificial Aplicada',
+    cat: 'Tecnología',
+    status: 'En curso',
+    icon: 'chip',
+    desc: 'Líneas de investigación y proyectos activos en esta área.',
+    imagen: COVER('ia'),
+  },
+  {
+    id: '3',
+    title: 'Sostenibilidad Ambiental',
+    cat: 'Ciencias Ambientales',
+    status: 'En curso',
+    icon: 'leaf',
+    desc: 'Líneas de investigación y proyectos activos en esta área.',
+    imagen: COVER('eco'),
+  },
+  {
+    id: '4',
+    title: 'Educación e Innovación Pedagógica',
+    cat: 'Ciencias de la Educación',
+    status: 'Planificación',
+    icon: 'book',
+    desc: 'Líneas de investigación y proyectos activos en esta área.',
+    imagen: COVER('edu'),
+  },
 ]
 
 const INITIAL_INTEGRANTES = [
@@ -42,6 +86,17 @@ function App() {
   const [user, setUser] = useState(null)
   const [loginForm, setLoginForm] = useState({ email: '', password: '' })
   const [loginError, setLoginError] = useState('')
+  const [registerForm, setRegisterForm] = useState({
+    email: '',
+    password: '',
+    password2: '',
+    nombres: '',
+    apellidos: '',
+    matricula: '',
+    codigo: '',
+  })
+  const [registerError, setRegisterError] = useState('')
+  const [registerOk, setRegisterOk] = useState(false)
   const [projects, setProjects] = useState(INITIAL_PROYECTOS)
   const [integrantes, setIntegrantes] = useState(INITIAL_INTEGRANTES)
   const [instrumentos, setInstrumentos] = useState(() => [...INITIAL_INSTRUMENTOS])
@@ -66,9 +121,91 @@ function App() {
   const [adminSection, setAdminSection] = useState('proyectos')
   const [editProyectoId, setEditProyectoId] = useState(null)
   const [editIntegranteId, setEditIntegranteId] = useState(null)
-  const [formProyecto, setFormProyecto] = useState({ title: '', cat: '', status: 'En curso', icon: 'flask', desc: '' })
+  const [formProyecto, setFormProyecto] = useState({
+    title: '',
+    cat: '',
+    status: 'En curso',
+    icon: 'flask',
+    desc: '',
+    imagen: '',
+  })
   const [formIntegrante, setFormIntegrante] = useState({ nombre: '', rol: '', disciplina: '' })
   const [detailModal, setDetailModal] = useState({ open: false, type: null, item: null })
+
+  useEffect(() => {
+    const syncUser = async (session) => {
+      if (!session?.user) {
+        setUser(null)
+        return
+      }
+      try {
+        const perfil = await profileService.verMiPerfil()
+        setUser({
+          email: session.user.email ?? '',
+          id: session.user.id,
+          isAdmin: perfil.rol === 'admin',
+        })
+      } catch {
+        setUser({
+          email: session.user.email ?? '',
+          id: session.user.id,
+          isAdmin: false,
+        })
+      }
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      syncUser(session)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncUser(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const docs = await docentesService.listarDocentes()
+        if (!cancelled) setIntegrantes(docs.map(docenteRowToIntegranteUi))
+      } catch (e) {
+        console.error(e)
+        if (!cancelled) setIntegrantes(INITIAL_INTEGRANTES)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = user?.isAdmin
+          ? await proyectosInvestigacionService.listarTodosAdmin()
+          : await proyectosInvestigacionService.listarParaSitio()
+        if (!cancelled) setProjects(list)
+      } catch (e) {
+        console.error(e)
+        if (!cancelled && !user?.isAdmin) setProjects(INITIAL_PROYECTOS)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.isAdmin])
+
+  useEffect(() => {
+    if (currentPage === 'admin' && user && !user.isAdmin) {
+      setCurrentPage('inicio')
+    }
+  }, [currentPage, user])
 
   const searchEntries = useMemo(() => getSearchEntries(instrumentos), [instrumentos])
 
@@ -99,20 +236,68 @@ function App() {
     )
   }
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setLoginError('')
-    if (loginForm.email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase() || loginForm.password !== ADMIN_PASSWORD) {
-      setLoginError('Solo un correo autorizado puede acceder.')
-      return
+    try {
+      const data = await authService.login(loginForm.email.trim(), loginForm.password)
+      const perfil = await profileService.verMiPerfil()
+      if (perfil.rol !== 'admin') {
+        await authService.logout()
+        setLoginError('Solo cuentas con rol administrador en la base de datos pueden acceder al panel.')
+        return
+      }
+      setUser({
+        email: data.user?.email ?? loginForm.email.trim(),
+        id: data.user?.id,
+        isAdmin: true,
+      })
+      setLoginForm({ email: '', password: '' })
+      setCurrentPage('admin')
+      setSidebarOpen(false)
+    } catch (err) {
+      setLoginError(err.message || 'Credenciales incorrectas.')
     }
-    setUser({ email: loginForm.email })
-    setLoginForm({ email: '', password: '' })
-    setCurrentPage('admin')
-    setSidebarOpen(false)
   }
 
-  const handleLogout = () => {
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    setRegisterError('')
+    setRegisterOk(false)
+    if (registerForm.password !== registerForm.password2) {
+      setRegisterError('Las contraseñas no coinciden.')
+      return
+    }
+    try {
+      await authService.signUp(
+        registerForm.email.trim(),
+        registerForm.password,
+        registerForm.nombres.trim(),
+        registerForm.apellidos.trim(),
+        registerForm.matricula.trim(),
+        registerForm.codigo.trim(),
+      )
+      setRegisterOk(true)
+      setRegisterForm({
+        email: '',
+        password: '',
+        password2: '',
+        nombres: '',
+        apellidos: '',
+        matricula: '',
+        codigo: '',
+      })
+    } catch (err) {
+      setRegisterError(err.message || 'No se pudo completar el registro.')
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout()
+    } catch {
+      /* ignore */
+    }
     setUser(null)
     setEditProyectoId(null)
     setEditIntegranteId(null)
@@ -124,39 +309,91 @@ function App() {
     setCorreoEnviado(true)
   }
 
-  const addProyecto = () => {
+  const addProyecto = async () => {
     if (!formProyecto.title.trim()) return
-    if (editProyectoId) {
-      setProjects((prev) => prev.map((p) => (p.id === editProyectoId ? { ...p, ...formProyecto } : p)))
-      setEditProyectoId(null)
-    } else {
-      setProjects((prev) => [...prev, { id: String(Date.now()), ...formProyecto }])
+    try {
+      if (editProyectoId) {
+        await proyectosInvestigacionService.actualizarAdmin(editProyectoId, formProyecto)
+        setEditProyectoId(null)
+      } else {
+        await proyectosInvestigacionService.crearAdmin(formProyecto)
+      }
+      setFormProyecto({ title: '', cat: '', status: 'En curso', icon: 'flask', desc: '', imagen: '' })
+      const list = await proyectosInvestigacionService.listarTodosAdmin()
+      setProjects(list)
+    } catch (err) {
+      window.alert(err.message || 'No se pudo guardar el proyecto.')
     }
-    setFormProyecto({ title: '', cat: '', status: 'En curso', icon: 'flask', desc: '' })
   }
 
-  const deleteProyecto = (id) => {
-    if (window.confirm('¿Eliminar este proyecto?')) setProjects((prev) => prev.filter((p) => p.id !== id))
+  const deleteProyecto = async (id) => {
+    if (!window.confirm('¿Eliminar este proyecto?')) return
+    try {
+      await proyectosInvestigacionService.eliminarAdmin(id)
+      const list = await proyectosInvestigacionService.listarTodosAdmin()
+      setProjects(list)
+    } catch (err) {
+      window.alert(err.message || 'No se pudo eliminar el proyecto.')
+    }
   }
 
   const startEditProyecto = (p) => {
     setEditProyectoId(p.id)
-    setFormProyecto({ title: p.title, cat: p.cat, status: p.status, icon: p.icon, desc: p.desc })
+    setFormProyecto({
+      title: p.title,
+      cat: p.cat,
+      status: p.status,
+      icon: p.icon,
+      desc: p.desc,
+      imagen: p.imagen || '',
+    })
   }
 
-  const addIntegrante = () => {
+  const addIntegrante = async () => {
     if (!formIntegrante.nombre.trim()) return
-    if (editIntegranteId) {
-      setIntegrantes((prev) => prev.map((i) => (i.id === editIntegranteId ? { ...i, ...formIntegrante } : i)))
-      setEditIntegranteId(null)
-    } else {
-      setIntegrantes((prev) => [...prev, { id: String(Date.now()), ...formIntegrante }])
+    try {
+      const { nombres, apellidos } = splitNombreCompleto(formIntegrante.nombre)
+      if (editIntegranteId) {
+        await docentesService.editarDocenteAdmin({
+          id: editIntegranteId,
+          updates: {
+            nombres,
+            apellidos,
+            cargo: formIntegrante.rol || null,
+            area_trabajo: formIntegrante.disciplina || null,
+          },
+        })
+        setEditIntegranteId(null)
+      } else {
+        const slug = `${slugifyDocenteKey(formIntegrante.nombre)}-${Date.now().toString(36)}`
+        await docentesService.agregarDocenteAdmin({
+          grado_academico: '—',
+          nombres,
+          apellidos,
+          slug,
+          correo: syntheticDocenteCorreo(),
+          cargo: formIntegrante.rol || undefined,
+          area_trabajo: formIntegrante.disciplina || undefined,
+        })
+      }
+      setFormIntegrante({ nombre: '', rol: '', disciplina: '' })
+      const docs = await docentesService.listarDocentes()
+      setIntegrantes(docs.map(docenteRowToIntegranteUi))
+    } catch (err) {
+      window.alert(err.message || 'No se pudo guardar el integrante.')
     }
-    setFormIntegrante({ nombre: '', rol: '', disciplina: '' })
   }
 
-  const deleteIntegrante = (id) => {
-    if (window.confirm('¿Eliminar este integrante?')) setIntegrantes((prev) => prev.filter((i) => i.id !== id))
+  const deleteIntegrante = async (id) => {
+    if (!window.confirm('¿Eliminar este integrante?')) return
+    try {
+      await docentesService.editarDocenteAdmin({ id, updates: { es_activo: false } })
+      await docentesService.borrarDocenteDesactivadoAdmin({ id })
+      const docs = await docentesService.listarDocentes()
+      setIntegrantes(docs.map(docenteRowToIntegranteUi))
+    } catch (err) {
+      window.alert(err.message || 'No se pudo eliminar el integrante.')
+    }
   }
 
   const startEditIntegrante = (i) => {
@@ -166,7 +403,7 @@ function App() {
 
   const cancelEditProyecto = () => {
     setEditProyectoId(null)
-    setFormProyecto({ title: '', cat: '', status: 'En curso', icon: 'flask', desc: '' })
+    setFormProyecto({ title: '', cat: '', status: 'En curso', icon: 'flask', desc: '', imagen: '' })
   }
 
   const cancelEditIntegrante = () => {
@@ -350,11 +587,11 @@ function App() {
               ← Volver a inicio
             </button>
             <h1 className="page-title">Inicio de sesión</h1>
-            <p className="page-subtitle">Solo el correo autorizado puede acceder al panel de administración.</p>
+            <p className="page-subtitle">Introduce tu correo y contraseña para continuar.</p>
             <form className="form-login" onSubmit={handleLogin}>
               <label>
                 <span>Correo electrónico</span>
-                <input type="email" value={loginForm.email} onChange={(e) => setLoginForm((s) => ({ ...s, email: e.target.value }))} required placeholder="admin@cimohu.edu.mx" />
+                <input type="email" value={loginForm.email} onChange={(e) => setLoginForm((s) => ({ ...s, email: e.target.value }))} required placeholder="tu@correo.com" />
               </label>
               <label>
                 <span>Contraseña</span>
@@ -362,11 +599,121 @@ function App() {
               </label>
               {loginError && <p className="form-login-error">{loginError}</p>}
               <button type="submit" className="btn btn-primary btn-block">Entrar</button>
+              <p className="form-login-register-hint">
+                ¿No tienes cuenta?{' '}
+                <button type="button" className="form-login-register-link" onClick={() => goTo('registro')}>
+                  Registrar
+                </button>
+              </p>
             </form>
           </div>
         )}
 
-        {currentPage === 'admin' && user && (
+        {currentPage === 'registro' && (
+          <div className="page-content page-login">
+            <button type="button" className="back-home" onClick={() => goTo('inicio')}>
+              ← Volver a inicio
+            </button>
+            <h1 className="page-title">Registrar</h1>
+            <p className="page-subtitle">
+              Crea tu cuenta con el código de acceso que te proporcionó la facultad. Si debes confirmar el correo,
+              revisa tu bandeja de entrada.
+            </p>
+            {registerOk ? (
+              <div className="form-login">
+                <p className="form-login-success">Registro enviado. Si hay confirmación por correo, ábrela y luego puedes ingresar.</p>
+                <button type="button" className="btn btn-primary btn-block" onClick={() => goTo('login')}>
+                  Ir a inicio de sesión
+                </button>
+              </div>
+            ) : (
+              <form className="form-login" onSubmit={handleRegister}>
+                <label>
+                  <span>Nombres</span>
+                  <input
+                    type="text"
+                    value={registerForm.nombres}
+                    onChange={(e) => setRegisterForm((s) => ({ ...s, nombres: e.target.value }))}
+                    required
+                    autoComplete="given-name"
+                  />
+                </label>
+                <label>
+                  <span>Apellidos</span>
+                  <input
+                    type="text"
+                    value={registerForm.apellidos}
+                    onChange={(e) => setRegisterForm((s) => ({ ...s, apellidos: e.target.value }))}
+                    required
+                    autoComplete="family-name"
+                  />
+                </label>
+                <label>
+                  <span>Matrícula (si aplica)</span>
+                  <input
+                    type="text"
+                    value={registerForm.matricula}
+                    onChange={(e) => setRegisterForm((s) => ({ ...s, matricula: e.target.value }))}
+                    placeholder="Opcional según tu tipo de acceso"
+                    autoComplete="off"
+                  />
+                </label>
+                <label>
+                  <span>Correo electrónico</span>
+                  <input
+                    type="email"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm((s) => ({ ...s, email: e.target.value }))}
+                    required
+                    autoComplete="email"
+                  />
+                </label>
+                <label>
+                  <span>Código de acceso</span>
+                  <input
+                    type="text"
+                    value={registerForm.codigo}
+                    onChange={(e) => setRegisterForm((s) => ({ ...s, codigo: e.target.value }))}
+                    required
+                    autoComplete="off"
+                  />
+                </label>
+                <label>
+                  <span>Contraseña</span>
+                  <input
+                    type="password"
+                    value={registerForm.password}
+                    onChange={(e) => setRegisterForm((s) => ({ ...s, password: e.target.value }))}
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </label>
+                <label>
+                  <span>Confirmar contraseña</span>
+                  <input
+                    type="password"
+                    value={registerForm.password2}
+                    onChange={(e) => setRegisterForm((s) => ({ ...s, password2: e.target.value }))}
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                </label>
+                {registerError && <p className="form-login-error">{registerError}</p>}
+                <button type="submit" className="btn btn-primary btn-block">Crear cuenta</button>
+                <p className="form-login-register-hint">
+                  ¿Ya tienes cuenta?{' '}
+                  <button type="button" className="form-login-register-link" onClick={() => goTo('login')}>
+                    Ingresar
+                  </button>
+                </p>
+              </form>
+            )}
+          </div>
+        )}
+
+        {currentPage === 'admin' && user?.isAdmin && (
           <AdminPanel
             onBackHome={() => goTo('inicio')}
             onLogout={handleLogout}
@@ -409,29 +756,11 @@ function App() {
         )}
 
         {currentPage === 'proyectos' && (
-          <div className="page-content page-proyectos">
-            <button type="button" className="back-home" onClick={() => goTo('inicio')}>
-              ← Volver a inicio
-            </button>
-            <h1 className="page-title">Divulgación científica</h1>
-            <p className="page-subtitle">
-              Proyectos y líneas de investigación — difusión del quehacer científico CIMOHU / FCCFyD.
-            </p>
-            <div className="cards-grid cards-proyectos">
-              {projects.map((p) => (
-                <article key={p.id} className="card-proyecto">
-                  <span className={`card-proyecto-badge ${p.status === 'En curso' ? 'en-curso' : 'planificacion'}`}>{p.status}</span>
-                  <div className="card-proyecto-icon">{ICON_MAP[p.icon] || '📄'}</div>
-                  <h3 className="card-proyecto-title">{p.title}</h3>
-                  <p className="card-proyecto-cat">{p.cat}</p>
-                  <p className="card-proyecto-desc">{p.desc}</p>
-                  <button type="button" className="card-link" onClick={() => openProyectoDetalle(p)}>
-                    Ver más
-                  </button>
-                </article>
-              ))}
-            </div>
-          </div>
+          <DivulgacionCientifica
+            projects={projects}
+            onBack={() => goTo('inicio')}
+            onOpenProyecto={openProyectoDetalle}
+          />
         )}
 
         {currentPage === 'inscripcion' && (
@@ -646,28 +975,22 @@ function App() {
         )}
 
         {currentPage !== 'calculadoraIMC' &&
-          instrumentos.some((i) => i.key === currentPage) && (
-            <div className="page-content page-instrumento-info">
-              <button type="button" className="back-home" onClick={() => goTo('inicio')}>
-                ← Volver a inicio
-              </button>
-              <h1 className="page-title">{instrumentos.find((i) => i.key === currentPage)?.label}</h1>
-              <p className="page-subtitle">{instrumentos.find((i) => i.key === currentPage)?.desc}</p>
-            </div>
-          )}
+          instrumentos.some((i) => i.key === currentPage) && (() => {
+            const inst = instrumentos.find((i) => i.key === currentPage)
+            const detail = inst?.detail
+            return (
+              <div className="page-content page-instrumento-info">
+                <button type="button" className="back-home" onClick={() => goTo('inicio')}>
+                  ← Volver a inicio
+                </button>
+                <h1 className="page-title">{inst?.label}</h1>
+                <p className="page-subtitle">{inst?.desc}</p>
+                {detail && <InstrumentoDetail detail={detail} />}
+              </div>
+            )
+          })()}
 
-        {currentPage === 'eventos' && (
-          <div className="page-content">
-            <button type="button" className="back-home" onClick={() => goTo('inicio')}>
-              ← Volver a inicio
-            </button>
-            <h1 className="page-title">Eventos</h1>
-            <p className="page-subtitle">
-              Aquí se publicarán congresos, jornadas y actividades de la coordinación de investigación y
-              la facultad.
-            </p>
-          </div>
-        )}
+        {currentPage === 'eventos' && <Eventos onBack={() => goTo('inicio')} />}
 
         {currentPage === 'interes' && (
           <Interes onBack={() => goTo('inicio')} videos={videosInteres} />

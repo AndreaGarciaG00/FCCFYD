@@ -252,6 +252,52 @@ CREATE TRIGGER tr_publicaciones_search_update
 
 
 -- ==========================================
+-- AUTO-SLUG PARA DOCENTES
+-- ==========================================
+-- Genera slug automaticamente en INSERT usando nombres + apellidos
+-- y garantiza unicidad con sufijos: -2, -3, etc.
+CREATE OR REPLACE FUNCTION public.docentes_slug_autogen()
+RETURNS trigger AS $$
+DECLARE
+  base_slug text;
+  candidate text;
+  n integer := 1;
+BEGIN
+  IF NEW.slug IS NULL OR btrim(NEW.slug) = '' THEN
+    base_slug := lower(
+      regexp_replace(
+        unaccent(coalesce(NEW.nombres, '') || ' ' || coalesce(NEW.apellidos, '')),
+        '[^a-zA-Z0-9]+',
+        '-',
+        'g'
+      )
+    );
+    base_slug := trim(both '-' from base_slug);
+
+    IF base_slug = '' THEN
+      RAISE EXCEPTION 'No se pudo generar slug para docente: nombres/apellidos vacios o invalidos.';
+    END IF;
+
+    candidate := base_slug;
+    WHILE EXISTS (SELECT 1 FROM public.docentes d WHERE d.slug = candidate) LOOP
+      n := n + 1;
+      candidate := base_slug || '-' || n::text;
+    END LOOP;
+
+    NEW.slug := candidate;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_docentes_slug_before_insert ON public.docentes;
+CREATE TRIGGER tr_docentes_slug_before_insert
+  BEFORE INSERT ON public.docentes
+  FOR EACH ROW EXECUTE PROCEDURE public.docentes_slug_autogen();
+
+
+-- ==========================================
 -- SEGURIDAD AUTOMÁTICA DE INFRAESTRUCTURA
 -- ==========================================
 

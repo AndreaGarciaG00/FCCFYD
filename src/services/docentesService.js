@@ -202,6 +202,24 @@ export const docentesService = {
   },
 
   /**
+   * Lista todos los docentes (activos e inactivos).
+   * Solo admin: valida rol en cliente; RLS permite al publico solo es_activo=true.
+   * @returns {Promise<Docente[]>}
+   */
+  verTodosDocentesAdmin: async () => {
+    await ensureAdmin()
+
+    const { data, error } = await supabase
+      .from('docentes')
+      .select('*')
+      .order('orden', { ascending: true })
+      .order('apellidos', { ascending: true })
+
+    if (error) throw error
+    return data ?? []
+  },
+
+  /**
    * Crea un registro en docentes. Solo admin (RLS + validacion en cliente).
    * @param {DocenteNuevo} datos
    * @returns {Promise<object>}

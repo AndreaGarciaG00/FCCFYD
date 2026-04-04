@@ -57,6 +57,24 @@ export const projectsInscriptionService = {
   },
 
   /**
+   * Lista todos los formatos de inscripcion (visibles y ocultos).
+   * Solo admin: RLS permite al publico solo es_visible=true; el admin ve el resto.
+   * @returns {Promise<object[]>}
+   */
+  verTodosFormatosInscripcionAdmin: async () => {
+    await ensureAdmin()
+
+    const { data, error } = await supabase
+      .from('inscripcion_proyectos')
+      .select('*')
+      .order('orden', { ascending: true })
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data ?? []
+  },
+
+  /**
    * Crea un formato de inscripcion de proyectos. Solo admin.
    * @param {FormatoInscripcionNuevo} payload
    * @returns {Promise<object>}

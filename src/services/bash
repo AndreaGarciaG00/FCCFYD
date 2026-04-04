@@ -9,7 +9,6 @@ curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/token?grant_type=
 
 
 LogOut - Cerrar Sesión
-
 curl -X POST 'https://fcemfddjpyxwfqqwlkfb.supabase.co/auth/v1/logout' \
 -H "apikey: sb_publishable_GpcUz7QkViAg5FPzkjsyPw_SmE7vtVv" \
 -H "Content-Type: application/json" \

@@ -296,6 +296,53 @@ CREATE TRIGGER tr_docentes_slug_before_insert
   BEFORE INSERT ON public.docentes
   FOR EACH ROW EXECUTE PROCEDURE public.docentes_slug_autogen();
 
+-- AUTO-SLUG PARA PROYECTOS DE INVESTIGACION (INSERT sin slug desde API/Bash)
+-- Genera slug desde titulo si viene vacio; unicidad con sufijos -2, -3, ...
+CREATE OR REPLACE FUNCTION public.proyectos_investigacion_slug_autogen()
+RETURNS trigger AS $$
+DECLARE
+  base_slug text;
+  candidate text;
+  n integer := 1;
+BEGIN
+  IF NEW.slug IS NULL OR btrim(NEW.slug) = '' THEN
+    base_slug := lower(
+      regexp_replace(
+        unaccent(coalesce(NEW.titulo, '')),
+        '[^a-zA-Z0-9]+',
+        '-',
+        'g'
+      )
+    );
+    base_slug := trim(both '-' from base_slug);
+    -- Evita slugs enormes (titulos largos)
+    IF char_length(base_slug) > 72 THEN
+      base_slug := left(base_slug, 72);
+      base_slug := trim(both '-' from regexp_replace(base_slug, '-+$', ''));
+    END IF;
+
+    IF base_slug = '' THEN
+      RAISE EXCEPTION 'No se pudo generar slug para proyecto: titulo vacio o invalido.';
+    END IF;
+
+    candidate := base_slug;
+    WHILE EXISTS (SELECT 1 FROM public.proyectos_investigacion p WHERE p.slug = candidate) LOOP
+      n := n + 1;
+      candidate := base_slug || '-' || n::text;
+    END LOOP;
+
+    NEW.slug := candidate;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_proyectos_investigacion_slug_before_insert ON public.proyectos_investigacion;
+CREATE TRIGGER tr_proyectos_investigacion_slug_before_insert
+  BEFORE INSERT ON public.proyectos_investigacion
+  FOR EACH ROW EXECUTE PROCEDURE public.proyectos_investigacion_slug_autogen();
+
 
 -- ==========================================
 -- SEGURIDAD AUTOMÁTICA DE INFRAESTRUCTURA

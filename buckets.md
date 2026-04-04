@@ -242,4 +242,26 @@ Cursor, basándote en @schema.sql, @schema_logic.sql y @types/supabase.ts crea u
 
 
 
+Excelente.
+Ahora ayudame a subir, actualizar y borrar el pdf del formato de inscripccion de proyectos especificamente al bucket inscripcion_proyectos
+Mi bucket se llama inscripcion_proyectos, es publico, por el momento no tiene policies RLS, tiene un limite de 10 MB y los MIME types permitidos son application/pdf
+En la base de datos tengo una tabla llamada inscripcion_proyectos y esta tabla tiene dos campos que se llaman file_url y file_path. Checa esta tabla en @schema.sql y en @types/supabase.ts 
+--1. file_url (La Dirección Pública)
+Es la URL completa (el link) que usas en el atributo src de tus etiquetas <img> en React.
 
+Propósito: Mostrar la imagen al usuario.
+
+Ejemplo: https://fce...supabase.co/storage/v1/object/public/avatars/mario_123.png
+
+Uso en el Front: ```javascript
+<--img src={perfil.avatar_url} alt="Foto de perfil" />
+
+
+--2. file_path (La Ruta del Archivo)
+Es el nombre o ruta interna del archivo dentro del "Bucket" de Supabase. No tiene el dominio ni protocolos, solo la ubicación del objeto.
+
+Propósito: Gestión administrativa (Borrar, Reemplazar, Mover).
+
+Ejemplo: avatars/mario_123.png
+
+Y dame el trigger o lo que se necesite para que supabase guarde el avatar en el bucket perfiles de supabase

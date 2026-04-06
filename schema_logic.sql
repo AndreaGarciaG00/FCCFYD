@@ -343,6 +343,52 @@ CREATE TRIGGER tr_proyectos_investigacion_slug_before_insert
   BEFORE INSERT ON public.proyectos_investigacion
   FOR EACH ROW EXECUTE PROCEDURE public.proyectos_investigacion_slug_autogen();
 
+-- AUTO-SLUG PARA PUBLICACIONES (INSERT sin slug: SQL directo, migraciones, respaldo)
+-- Misma regla que en app: titulo -> unaccent, minusculas, guiones; max 72 chars; -2, -3 si hay colision
+CREATE OR REPLACE FUNCTION public.publicaciones_slug_autogen()
+RETURNS trigger AS $$
+DECLARE
+  base_slug text;
+  candidate text;
+  n integer := 1;
+BEGIN
+  IF NEW.slug IS NULL OR btrim(NEW.slug) = '' THEN
+    base_slug := lower(
+      regexp_replace(
+        unaccent(coalesce(NEW.titulo, '')),
+        '[^a-zA-Z0-9]+',
+        '-',
+        'g'
+      )
+    );
+    base_slug := trim(both '-' from base_slug);
+    IF char_length(base_slug) > 72 THEN
+      base_slug := left(base_slug, 72);
+      base_slug := trim(both '-' from regexp_replace(base_slug, '-+$', ''));
+    END IF;
+
+    IF base_slug = '' THEN
+      RAISE EXCEPTION 'No se pudo generar slug para publicacion: titulo vacio o invalido.';
+    END IF;
+
+    candidate := base_slug;
+    WHILE EXISTS (SELECT 1 FROM public.publicaciones p WHERE p.slug = candidate) LOOP
+      n := n + 1;
+      candidate := base_slug || '-' || n::text;
+    END LOOP;
+
+    NEW.slug := candidate;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_publicaciones_slug_before_insert ON public.publicaciones;
+CREATE TRIGGER tr_publicaciones_slug_before_insert
+  BEFORE INSERT ON public.publicaciones
+  FOR EACH ROW EXECUTE PROCEDURE public.publicaciones_slug_autogen();
+
 
 -- ==========================================
 -- SEGURIDAD AUTOMÁTICA DE INFRAESTRUCTURA

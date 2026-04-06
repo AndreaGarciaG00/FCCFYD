@@ -238,6 +238,87 @@ using (
 );
 
 
+-- =============================================================================
+-- Bucket: publicaciones (imagenes y adjuntos de la tabla public.publicaciones)
+-- Independiente de inscripcion_proyectos. Rutas en codigo: {uuid}/galeria/... y {uuid}/adjuntos/...
+-- Crear el bucket "publicaciones" en el dashboard (publico si quieres URLs directas).
+-- =============================================================================
+
+-- Quitar politicas erroneas si las aplicaste antes (mezclaban este bucket con inscripcion_proyectos)
+drop policy if exists "Admin upload inscripcion_proyectos publicaciones" on storage.objects;
+drop policy if exists "Admin update inscripcion_proyectos publicaciones" on storage.objects;
+drop policy if exists "Admin delete inscripcion_proyectos publicaciones" on storage.objects;
+
+drop policy if exists "Public read bucket publicaciones" on storage.objects;
+create policy "Public read bucket publicaciones"
+on storage.objects
+for select
+to public
+using (bucket_id = 'publicaciones');
+
+drop policy if exists "Admin upload bucket publicaciones" on storage.objects;
+create policy "Admin upload bucket publicaciones"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'publicaciones'
+  and (storage.foldername(name))[1] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  and (storage.foldername(name))[2] in ('galeria', 'adjuntos')
+  and exists (
+    select 1
+    from public.perfiles p
+    where p.id = auth.uid()
+      and p.rol = 'admin'
+  )
+);
+
+drop policy if exists "Admin update bucket publicaciones" on storage.objects;
+create policy "Admin update bucket publicaciones"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'publicaciones'
+  and (storage.foldername(name))[1] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  and (storage.foldername(name))[2] in ('galeria', 'adjuntos')
+  and exists (
+    select 1
+    from public.perfiles p
+    where p.id = auth.uid()
+      and p.rol = 'admin'
+  )
+)
+with check (
+  bucket_id = 'publicaciones'
+  and (storage.foldername(name))[1] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  and (storage.foldername(name))[2] in ('galeria', 'adjuntos')
+  and exists (
+    select 1
+    from public.perfiles p
+    where p.id = auth.uid()
+      and p.rol = 'admin'
+  )
+);
+
+drop policy if exists "Admin delete bucket publicaciones" on storage.objects;
+create policy "Admin delete bucket publicaciones"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'publicaciones'
+  and (storage.foldername(name))[1] ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  and (storage.foldername(name))[2] in ('galeria', 'adjuntos')
+  and exists (
+    select 1
+    from public.perfiles p
+    where p.id = auth.uid()
+      and p.rol = 'admin'
+  )
+);
+
+
 Cursor, basándote en @schema.sql, @schema_logic.sql y @types/supabase.ts crea una función en TypeScript para el admin, los usuarios logueados como mestros y alumnos y tambien los que no estan logueados puedan todos ver los formatos de inscripcion de proyectos cuando estos sean visible. Después, dame el comando Bash para probar esto siendo Admin. Quiero que las funciones se guarden en la carpeta @src/services en el archivo  @src/services/projectsInscriptionService.js 
 
 

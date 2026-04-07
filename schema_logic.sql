@@ -504,13 +504,13 @@ WITH CHECK (
 -- RLS proyectos_investigacion
 -- 1. POLÍTICA: Lectura Universal (SELECT)
 -- Propósito: Permitir que alumnos, maestros y visitantes vean los proyectos.
--- El público solo ve lo "publicado", el Admin ve borradores y proyectos ocultos.
+-- El público solo ve lo visible (es_visible), el Admin ve borradores y ocultos.
 CREATE POLICY "Lectura: Público ve proyectos publicados, Admin ve todos"
 ON public.proyectos_investigacion
 FOR SELECT
 TO anon, authenticated
 USING (
-    es_publicado = true 
+    es_visible = true 
     OR 
     (SELECT rol FROM public.perfiles WHERE id = auth.uid()) = 'admin'
 );

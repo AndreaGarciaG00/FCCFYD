@@ -1,6 +1,7 @@
-/** Portada para tarjetas y modal; usa URL guardada o imagen de respaldo por id. */
+/** Portada para tarjetas y modal; usa URL en `imagen` (primera de `imagenes` en BD). */
 export function proyectoCoverUrl(p) {
   const u = p?.imagen && String(p.imagen).trim()
   if (u) return u
-  return `https://picsum.photos/seed/fccfyd-proy-${p.id}/480/320`
+  const id = p?.id != null ? p.id : 'x'
+  return `https://picsum.photos/seed/fccfyd-proy-${id}/480/320`
 }

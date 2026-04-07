@@ -9,6 +9,18 @@ function normalize(str) {
 const BASE_ENTRIES = [
   { page: 'inicio', terms: ['inicio', 'principal', 'portada', 'home', 'fccfyd', 'ujed', 'facultad'] },
   {
+    page: 'proyectosInv',
+    terms: [
+      'proyectos de investigacion',
+      'proyectos de investigación',
+      'ficha proyecto',
+      'catalogo investigacion',
+      'catálogo investigación',
+      'galeria proyecto',
+      'galería proyecto',
+    ],
+  },
+  {
     page: 'proyectos',
     terms: [
       'divulgacion',
@@ -27,7 +39,7 @@ const BASE_ENTRIES = [
     page: 'inscripcion',
     terms: ['inscripcion', 'inscripción', 'registro', 'tramite', 'trámite', 'formato', 'asesor'],
   },
-  { page: 'eventos', terms: ['eventos', 'congreso', 'jornada', 'actividades'] },
+  { page: 'eventos', terms: ['publicaciones', 'publicacion', 'eventos', 'congreso', 'jornada', 'actividades'] },
   { page: 'grupo', terms: ['grupo', 'cuerpo', 'academico', 'académico', 'integrantes', 'profesores'] },
   {
     page: 'formularioServicio',

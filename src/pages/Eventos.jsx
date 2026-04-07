@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import SearchBar from '../components/SearchBar.jsx'
 import DetailModal from '../components/DetailModal.jsx'
 import { EVENTOS_STATIC } from '../data/eventosStatic.js'
+import { publicacionesInteraccionService } from '../services/publicacionesInteraccionService.js'
 
 function inicioDia(fechaISO) {
   const d = new Date(`${fechaISO}T12:00:00`)
@@ -40,9 +41,18 @@ function metaUnaLinea(hora, lugar) {
   return h || l || '—'
 }
 
-export default function Eventos({ onBack, events = EVENTOS_STATIC }) {
+export default function Eventos({ onBack, events = EVENTOS_STATIC, user = null }) {
   const [busqueda, setBusqueda] = useState('')
   const [detalle, setDetalle] = useState(null)
+  const [likesCount, setLikesCount] = useState(0)
+  const [likedByMe, setLikedByMe] = useState(false)
+  const [comentarios, setComentarios] = useState([])
+  const [nuevoComentario, setNuevoComentario] = useState('')
+  const [socialLoading, setSocialLoading] = useState(false)
+  const [socialError, setSocialError] = useState('')
+  const [likeBusy, setLikeBusy] = useState(false)
+  const [commentBusy, setCommentBusy] = useState(false)
+  const [socialById, setSocialById] = useState({})
 
   const { proximos, pasados } = useMemo(() => {
     const hoy = new Date()
@@ -63,30 +73,165 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC }) {
   const pasadosF = useMemo(() => pasados.filter((ev) => eventMatches(ev, busqueda)), [pasados, busqueda])
   const sinResultados = busqueda.trim() && proximosF.length === 0 && pasadosF.length === 0
 
+  const refreshCardSocial = async (publicacionId, perfilId) => {
+    if (!publicacionId) return
+    const [reacciones, comments] = await Promise.all([
+      publicacionesInteraccionService.listarReacciones(publicacionId),
+      publicacionesInteraccionService.listarComentarios(publicacionId),
+    ])
+    const next = {
+      likesCount: reacciones.length,
+      commentsCount: comments.length,
+      likedByMe: !!perfilId && reacciones.some((r) => r.perfil_id === perfilId),
+    }
+    setSocialById((prev) => ({ ...prev, [publicacionId]: next }))
+    return next
+  }
+
+  useEffect(() => {
+    const visible = [...proximosF, ...pasadosF]
+    if (!visible.length) return
+    let cancelled = false
+    ;(async () => {
+      const entries = await Promise.all(
+        visible.map(async (ev) => {
+          try {
+            const s = await refreshCardSocial(ev.id, user?.id)
+            return [ev.id, s]
+          } catch {
+            return [ev.id, { likesCount: 0, commentsCount: 0, likedByMe: false }]
+          }
+        }),
+      )
+      if (!cancelled) {
+        setSocialById((prev) => ({ ...prev, ...Object.fromEntries(entries) }))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [proximosF, pasadosF, user?.id])
+
+  const cargarSocial = async (publicacionId, perfilId) => {
+    if (!publicacionId) return
+    setSocialLoading(true)
+    setSocialError('')
+    try {
+      const [reacciones, comments] = await Promise.all([
+        publicacionesInteraccionService.listarReacciones(publicacionId),
+        publicacionesInteraccionService.listarComentarios(publicacionId),
+      ])
+      setLikesCount(reacciones.length)
+      setLikedByMe(!!perfilId && reacciones.some((r) => r.perfil_id === perfilId))
+      setComentarios(comments)
+    } catch (e) {
+      setSocialError(e.message || 'No se pudieron cargar likes/comentarios.')
+      setLikesCount(0)
+      setLikedByMe(false)
+      setComentarios([])
+    } finally {
+      setSocialLoading(false)
+    }
+  }
+
+  const abrirDetalle = async (ev) => {
+    setDetalle(ev)
+    setNuevoComentario('')
+    setLikesCount(0)
+    setLikedByMe(false)
+    setComentarios([])
+    if (ev?.id) {
+      await cargarSocial(ev.id, user?.id)
+    }
+  }
+
+  const toggleLike = async () => {
+    if (!detalle?.id || likeBusy) return
+    if (!user?.id) {
+      window.alert('Inicia sesión para dar like.')
+      return
+    }
+    setLikeBusy(true)
+    setSocialError('')
+    try {
+      if (likedByMe) {
+        await publicacionesInteraccionService.quitarLike(detalle.id, user.id)
+      } else {
+        await publicacionesInteraccionService.darLike(detalle.id, user.id)
+      }
+      await cargarSocial(detalle.id, user.id)
+      await refreshCardSocial(detalle.id, user.id)
+    } catch (e) {
+      setSocialError(e.message || 'No se pudo actualizar el like.')
+    } finally {
+      setLikeBusy(false)
+    }
+  }
+
+  const enviarComentario = async () => {
+    if (!detalle?.id || commentBusy) return
+    if (!user?.id) {
+      window.alert('Inicia sesión para comentar.')
+      return
+    }
+    const texto = nuevoComentario.trim()
+    if (!texto) return
+    setCommentBusy(true)
+    setSocialError('')
+    try {
+      await publicacionesInteraccionService.crearComentario(detalle.id, user.id, texto)
+      setNuevoComentario('')
+      await cargarSocial(detalle.id, user.id)
+      await refreshCardSocial(detalle.id, user.id)
+    } catch (e) {
+      setSocialError(e.message || 'No se pudo publicar el comentario.')
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  const toggleLikeCard = async (ev) => {
+    if (!ev?.id) return
+    if (!user?.id) {
+      window.alert('Inicia sesión para dar like.')
+      return
+    }
+    const current = socialById[ev.id] || { likesCount: 0, commentsCount: 0, likedByMe: false }
+    try {
+      if (current.likedByMe) {
+        await publicacionesInteraccionService.quitarLike(ev.id, user.id)
+      } else {
+        await publicacionesInteraccionService.darLike(ev.id, user.id)
+      }
+      await refreshCardSocial(ev.id, user.id)
+      if (detalle?.id === ev.id) {
+        await cargarSocial(ev.id, user.id)
+      }
+    } catch (e) {
+      window.alert(e.message || 'No se pudo actualizar el like.')
+    }
+  }
+
   return (
     <div className="page-content page-eventos">
       <button type="button" className="back-home" onClick={onBack}>
         ← Volver a inicio
       </button>
 
-      <h1 className="page-title">Eventos</h1>
-      <p className="page-subtitle">
-        Congresos, jornadas y actividades de la coordinación de investigación y la facultad.
-      </p>
+      <h1 className="page-title">Publicaciones</h1>
 
       <div className="eventos-toolbar">
         <SearchBar
           className="site-search site-search--eventos"
           placeholder="Buscar por nombre, lugar, tipo o fecha…"
-          ariaLabel="Buscar eventos"
+          ariaLabel="Buscar publicaciones"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        <p className="eventos-toolbar-hint">Filtra en vivo. Pulsa una tarjeta para ver el detalle completo.</p>
       </div>
 
       {sinResultados ? (
-        <p className="eventos-sin-resultados">Ningún evento coincide con «{busqueda.trim()}». Prueba otras palabras.</p>
+        <p className="eventos-sin-resultados">Ninguna publicación coincide con «{busqueda.trim()}». Prueba otras palabras.</p>
       ) : null}
 
       <div className="eventos-stack">
@@ -95,7 +240,7 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC }) {
             Próximos
           </h2>
           {proximosF.length === 0 && !sinResultados ? (
-            <p className="eventos-panel-empty">No hay eventos futuros en esta lista.</p>
+            <p className="eventos-panel-empty">No hay publicaciones futuras en esta lista.</p>
           ) : null}
           {proximosF.length > 0 ? (
             <div className="eventos-cards-grid">
@@ -104,7 +249,10 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC }) {
                   key={ev.id}
                   ev={ev}
                   fechaCorta={formatoCorto(ev.fechaISO)}
-                  onAbrir={() => setDetalle(ev)}
+                  onAbrir={() => abrirDetalle(ev)}
+                  social={socialById[ev.id]}
+                  onLike={() => toggleLikeCard(ev)}
+                  onComentar={() => abrirDetalle(ev)}
                 />
               ))}
             </div>
@@ -117,7 +265,7 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC }) {
               Anteriores
             </h2>
             {pasadosF.length === 0 && !sinResultados ? (
-              <p className="eventos-panel-empty">No hay eventos pasados que coincidan con la búsqueda.</p>
+              <p className="eventos-panel-empty">No hay publicaciones pasadas que coincidan con la búsqueda.</p>
             ) : null}
             {pasadosF.length > 0 ? (
               <div className="eventos-cards-grid">
@@ -126,7 +274,10 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC }) {
                     key={ev.id}
                     ev={ev}
                     fechaCorta={formatoCorto(ev.fechaISO)}
-                    onAbrir={() => setDetalle(ev)}
+                    onAbrir={() => abrirDetalle(ev)}
+                    social={socialById[ev.id]}
+                    onLike={() => toggleLikeCard(ev)}
+                    onComentar={() => abrirDetalle(ev)}
                   />
                 ))}
               </div>
@@ -135,19 +286,29 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC }) {
         ) : null}
       </div>
 
-      <p className="eventos-footnote">
-        Pulsa una tarjeta para ampliar. Las imágenes de ejemplo pueden sustituirse por carteles propios.
-      </p>
-
       <DetailModal
         detail={{ open: detalle != null, type: 'evento', item: detalle }}
         onClose={() => setDetalle(null)}
+        eventoSocial={{
+          likesCount,
+          likedByMe,
+          comentarios,
+          nuevoComentario,
+          socialLoading,
+          socialError,
+          likeBusy,
+          commentBusy,
+          isAuthenticated: !!user?.id,
+        }}
+        onToggleEventoLike={toggleLike}
+        onChangeEventoComment={setNuevoComentario}
+        onSubmitEventoComment={enviarComentario}
       />
     </div>
   )
 }
 
-function EventoTarjeta({ ev, fechaCorta, onAbrir }) {
+function EventoTarjeta({ ev, fechaCorta, onAbrir, social, onLike, onComentar }) {
   const src = ev.imagen || DEFAULT_IMG
   return (
     <button type="button" className="eventos-card" onClick={onAbrir} aria-label={`Ver detalles: ${ev.titulo}`}>
@@ -160,6 +321,18 @@ function EventoTarjeta({ ev, fechaCorta, onAbrir }) {
         <h3 className="eventos-card-title">{ev.titulo}</h3>
         <p className="eventos-card-meta">{metaUnaLinea(ev.hora, ev.lugar)}</p>
         <p className="eventos-card-snippet">{ev.resumen}</p>
+        <div className="eventos-card-social" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={`eventos-card-social-btn ${social?.likedByMe ? 'is-liked' : ''}`}
+            onClick={onLike}
+          >
+            {social?.likedByMe ? '❤️' : '🤍'} {social?.likesCount ?? 0}
+          </button>
+          <button type="button" className="eventos-card-social-btn" onClick={onComentar}>
+            💬 {social?.commentsCount ?? 0}
+          </button>
+        </div>
         <span className="eventos-card-cta">Ver detalles →</span>
       </div>
     </button>

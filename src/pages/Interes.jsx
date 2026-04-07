@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import SearchBar from '../components/SearchBar.jsx'
 import { youtubeThumbUrl } from '../data/videosInteres.js'
 
 function VideoCard({ id, title, description }) {
   const [playing, setPlaying] = useState(false)
-  const thumb = youtubeThumbUrl(id, 'maxresdefault')
-  const thumbFallback = youtubeThumbUrl(id, 'hqdefault')
+  const thumb = youtubeThumbUrl(id, 'hqdefault')
+  const thumbFallback = youtubeThumbUrl(id, 'mqdefault')
 
   return (
     <article className="interes-video-card">
@@ -59,6 +60,26 @@ function VideoCard({ id, title, description }) {
 }
 
 export default function Interes({ onBack, videos = [] }) {
+  const [busqueda, setBusqueda] = useState('')
+
+  const videosFiltrados = useMemo(() => {
+    const q = String(busqueda || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+    if (!q) return videos
+    const norm = (s) =>
+      String(s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '')
+    return videos.filter((v) => {
+      const blob = norm([v.title, v.description, v.id].join(' '))
+      return blob.includes(q)
+    })
+  }, [videos, busqueda])
+
   return (
     <div className="page-content page-interes">
       {onBack && (
@@ -70,8 +91,20 @@ export default function Interes({ onBack, videos = [] }) {
       <p className="page-subtitle page-interes-lead">
         Material audiovisual y recursos útiles para la comunidad FCCFyD.
       </p>
+      <div className="interes-toolbar">
+        <SearchBar
+          className="site-search site-search--interes"
+          placeholder="Buscar video por título o tema…"
+          ariaLabel="Buscar en De interés"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
+      </div>
+      {videosFiltrados.length === 0 ? (
+        <p className="interes-vacio">No hay videos que coincidan con «{busqueda.trim()}».</p>
+      ) : null}
       <div className="interes-videos-grid">
-        {videos.map((v) => (
+        {videosFiltrados.map((v) => (
           <VideoCard key={v.id} id={v.id} title={v.title} description={v.description} />
         ))}
       </div>

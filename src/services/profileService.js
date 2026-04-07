@@ -56,7 +56,47 @@ const ensureAdmin = async () => {
   }
 }
 
+const pickCamposAdmin = (payload = {}) => {
+  const allowed = [
+    'nombres',
+    'apellidos',
+    'matricula',
+    'rol',
+    'email_capsula',
+    'avatar_url',
+    'avatar_path',
+    'datos_adicionales',
+  ]
+  const out = {}
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      out[key] = payload[key]
+    }
+  }
+  return out
+}
+
+/** Compara el rol de BD con 'admin' tolerando espacios o mayúsculas accidentales. */
+export function rolEsAdmin(rol) {
+  return String(rol ?? '')
+    .trim()
+    .toLowerCase() === 'admin'
+}
+
 export const profileService = {
+  /**
+   * Lee la fila en `perfiles` para un usuario ya autenticado (misma sesión JWT).
+   * Útil justo después de `signInWithPassword`, cuando conviene usar el `user.id` devuelto por Auth.
+   * @param {string} userId — debe coincidir con `auth.users.id` de la sesión actual
+   * @returns {Promise<Perfil>}
+   */
+  verPerfilTrasLogin: async (userId) => {
+    if (!userId) throw new Error('No hay id de usuario.')
+    const { data, error } = await supabase.from('perfiles').select('*').eq('id', userId).single()
+    if (error) throw error
+    return data
+  },
+
   /**
    * Obtiene el perfil del usuario autenticado actual.
    * Aplica para cualquier rol logueado: alumno, maestro, admin o invitado.
@@ -126,5 +166,26 @@ export const profileService = {
 
     if (error) throw error
     return data ?? []
-  }
+  },
+
+  /**
+   * Actualiza un perfil cualquiera (rol, matrícula, avatar, jsonb…). Solo admin.
+   * @param {string} id uuid del perfil (= auth.users.id)
+   * @param {Record<string, any>} cambios
+   */
+  editarPerfilAdmin: async (id, cambios = {}) => {
+    await ensureAdmin()
+    const updates = pickCamposAdmin(cambios)
+    if (Object.keys(updates).length === 0) {
+      throw new Error('No hay campos permitidos para actualizar en perfiles.')
+    }
+    const { data, error } = await supabase
+      .from('perfiles')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (error) throw error
+    return data
+  },
 }

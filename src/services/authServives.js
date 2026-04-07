@@ -4,11 +4,17 @@ export const authService = {
   // Función para Iniciar Sesión
   login: async (/*Datos que vienen del frontend*/email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: String(email || '').trim().toLowerCase(),
+      password: String(password || ''),
     })
 
-    if (error) throw error
+    if (error) {
+      const raw = String(error.message || '')
+      if (/invalid login credentials|invalid email or password/i.test(raw)) {
+        throw new Error('Email o contraseña incorrectos, o la cuenta aún no está confirmada.')
+      }
+      throw error
+    }
     return data // Aquí viene el user y la session (el token)
   },
 
@@ -22,6 +28,13 @@ export const authService = {
   getCurrentUser: async () => {
     const { data: { user } } = await supabase.auth.getUser()
     return user
+  },
+
+  /** Actualizar contraseña del usuario con sesión activa (equiv. PUT /auth/v1/user). */
+  updatePassword: async (newPassword) => {
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw error
+    return data
   },
 
   //Funcion para registrarse

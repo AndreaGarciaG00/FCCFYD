@@ -3,8 +3,16 @@ import logoUjed from '../assets/UJEDLOGO-removebg-preview.png'
 const NAV_TOP = [
   { key: 'inicio', label: 'Página principal' },
   { key: 'inscripcion', label: 'Inscripción de Proyectos de Investigación' },
-  { key: 'eventos', label: 'Eventos' },
+  { key: 'proyectosInv', label: 'Proyectos de Investigación' },
+  { key: 'eventos', label: 'Publicaciones' },
 ]
+
+function navTopIsActive(currentPage, key) {
+  if (key === 'proyectosInv') {
+    return currentPage === 'proyectosInv' || currentPage === 'proyectosInvDetalle'
+  }
+  return currentPage === key
+}
 
 const NAV_AFTER_ACADEMICO = [
   { key: 'proyectos', label: 'Divulgación científica' },
@@ -25,7 +33,7 @@ export default function Sidebar({
   const [academicoOpen, setAcademicoOpen] = useState(false)
   const [instrumentosOpen, setInstrumentosOpen] = useState(false)
 
-  const grupoActivo = currentPage === 'grupo'
+  const grupoActivo = currentPage === 'grupo' || currentPage === 'grupoDetalle'
   const instrumentoActivo = instrumentos.some((i) => i.key === currentPage)
 
   useEffect(() => {
@@ -67,7 +75,7 @@ export default function Sidebar({
             <button
               key={key}
               type="button"
-              className={`sidebar-link ${currentPage === key ? 'active' : ''}`}
+              className={`sidebar-link ${navTopIsActive(currentPage, key) ? 'active' : ''}`}
               onClick={() => onNavigate(key)}
             >
               {label}
@@ -75,18 +83,29 @@ export default function Sidebar({
           ))}
 
           <div className="sidebar-accordion">
-            <button
-              type="button"
-              className={`sidebar-accordion-toggle ${grupoActivo ? 'active' : ''} ${academicoOpen ? 'is-open' : ''}`}
-              onClick={toggleAcademico}
-              aria-expanded={academicoOpen}
+            <div
+              className={`sidebar-accordion-row ${grupoActivo ? 'active' : ''} ${academicoOpen ? 'is-open' : ''}`}
               id="sidebar-academico-btn"
             >
-              <span className="sidebar-chevron" aria-hidden>
-                ▼
-              </span>
-              <span className="sidebar-accordion-label">Cuerpo Académico</span>
-            </button>
+              <button
+                type="button"
+                className={`sidebar-accordion-main ${grupoActivo ? 'active' : ''}`}
+                onClick={() => onNavigate('grupo')}
+              >
+                Cuerpo Académico
+              </button>
+              <button
+                type="button"
+                className="sidebar-accordion-chevron"
+                onClick={toggleAcademico}
+                aria-expanded={academicoOpen}
+                aria-label={academicoOpen ? 'Ocultar nombres' : 'Mostrar nombres'}
+              >
+                <span className="sidebar-chevron" aria-hidden>
+                  ▼
+                </span>
+              </button>
+            </div>
             {academicoOpen && (
               <div className="sidebar-accordion-panel" role="region" aria-labelledby="sidebar-academico-btn">
                 {integrantes.map((persona) => (

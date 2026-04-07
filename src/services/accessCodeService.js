@@ -34,6 +34,7 @@ const pickEditableFields = (payload = {}) => {
   const allowedFields = [
     'tipo',
     'descripcion',
+    'dominio_permitido',
     'email_especifico',
     'uso_maximo',
     'fecha_expiracion',
@@ -52,22 +53,30 @@ const pickEditableFields = (payload = {}) => {
 }
 
 export const accessCodeService = {
-  // Funcion para crear un nuevo codigo de acceso
+  // Funcion para crear un nuevo codigo de acceso (solo admin; misma política que listar)
   crearCodigoAcceso: async (formDatos) => {
+    await ensureAdmin()
+
+    const emailInvitado =
+      formDatos.tipo === 'INVITADO' && formDatos.email?.trim()
+        ? formDatos.email.trim()
+        : null
+
     const { data, error } = await supabase
       .from('codigo_acceso')
       .insert([
         {
           codigo: formDatos.codigo,
-          tipo: formDatos.tipo, // 'ALUMNOS', 'MAESTROS' o 'INVITADO'
-          rol_a_asignar: formDatos.rol, // 'alumno' o 'maestro'
-          email_especifico: formDatos.email, // Solo si es invitado
-          descripcion: formDatos.descripcion,
-          uso_maximo: formDatos.usoMaximo || -1,
-          fecha_expiracion: formDatos.fechaExp || '2026-12-31T23:59:59+00:00'
-        }
+          tipo: formDatos.tipo,
+          rol_a_asignar: formDatos.rol,
+          dominio_permitido: formDatos.dominioPermitido?.trim() || null,
+          email_especifico: emailInvitado,
+          descripcion: formDatos.descripcion || null,
+          uso_maximo: formDatos.usoMaximo ?? -1,
+          fecha_expiracion: formDatos.fechaExp || '2026-12-31T23:59:59+00:00',
+        },
       ])
-      .select() // Esto devuelve el codigo recien creado
+      .select()
 
     if (error) throw error
     return data

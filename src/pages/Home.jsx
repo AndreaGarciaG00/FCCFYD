@@ -56,9 +56,24 @@ export default function Home({ onNavigate, areasRef, onScrollToAreas, onSiteSear
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </div>
-            <h3 className="area-card-title">Inscripción de Proyectos</h3>
+            <h3 className="area-card-title">Inscripción de Proyectos de Investigación</h3>
             <p className="area-card-desc">
               Registra tu proyecto de investigación y únete a nuestra comunidad académica.
+            </p>
+            <span className="area-card-cta">Ver más</span>
+          </article>
+
+          <article className="area-card" onClick={() => onNavigate('proyectosInv')}>
+            <div className="area-card-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 3h6v4H9V3z" />
+                <path d="M8 7h8v14H8V7z" />
+                <path d="M12 11v6M9 14h6" />
+              </svg>
+            </div>
+            <h3 className="area-card-title">Proyectos de Investigación</h3>
+            <p className="area-card-desc">
+              Fichas completas y galería de imágenes de los proyectos publicados por coordinación.
             </p>
             <span className="area-card-cta">Ver más</span>
           </article>
@@ -72,9 +87,9 @@ export default function Home({ onNavigate, areasRef, onScrollToAreas, onSiteSear
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </div>
-            <h3 className="area-card-title">Grupos de Investigación</h3>
+            <h3 className="area-card-title">Cuerpo Académico</h3>
             <p className="area-card-desc">
-              Conoce los grupos de investigación y sus áreas de especialización.
+              Conoce al cuerpo académico y sus áreas de especialización.
             </p>
             <span className="area-card-cta">Ver más</span>
           </article>
@@ -86,9 +101,37 @@ export default function Home({ onNavigate, areasRef, onScrollToAreas, onSiteSear
                 <path d="M22 6l-10 7L2 6" />
               </svg>
             </div>
-            <h3 className="area-card-title">Formulario Servicio</h3>
+            <h3 className="area-card-title">Servicio social</h3>
             <p className="area-card-desc">
-              Coordinación de investigación. Envíe su solicitud y reciba notificación por correo.
+              Coordinación de investigación. Envía tu solicitud y recibe notificación por correo.
+            </p>
+            <span className="area-card-cta">Ver más</span>
+          </article>
+
+          <article className="area-card" onClick={() => onNavigate('eventos')}>
+            <div className="area-card-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </div>
+            <h3 className="area-card-title">Publicaciones</h3>
+            <p className="area-card-desc">
+              Noticias y eventos de la coordinación, con opción de ver detalles e interactuar.
+            </p>
+            <span className="area-card-cta">Ver más</span>
+          </article>
+
+          <article className="area-card" onClick={() => onNavigate('interes')}>
+            <div className="area-card-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="23 7 16 12 23 17 23 7" />
+                <rect x="1" y="5" width="15" height="14" rx="2" />
+              </svg>
+            </div>
+            <h3 className="area-card-title">De interés</h3>
+            <p className="area-card-desc">
+              Material audiovisual y recursos útiles para la comunidad FCCFyD.
             </p>
             <span className="area-card-cta">Ver más</span>
           </article>

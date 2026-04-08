@@ -3,8 +3,8 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-left">
-          <p className="footer-title">FCCFYD · Facultad de Ciencias de la Cultura Fisica y Deporte</p>
-          <p className="footer-text">
+          <p className="footer-title">FCCFYD · Facultad de Ciencias de la Cultura Física y Deporte</p>
+          <p className="footer-text footer-tagline">
             Coordinación de Investigación y Cuerpo Académico · FCCFyD · UJED
           </p>
         </div>

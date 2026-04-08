@@ -8,6 +8,7 @@ import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
 import Interes from './pages/Interes.jsx'
 import Eventos from './pages/Eventos.jsx'
+import PublicacionDetallePage from './pages/PublicacionDetallePage.jsx'
 import CuerpoAcademico from './pages/CuerpoAcademico.jsx'
 import IntegranteDetallePage from './pages/IntegranteDetallePage.jsx'
 import DivulgacionCientifica from './pages/DivulgacionCientifica.jsx'
@@ -16,8 +17,8 @@ import ProyectoInvestigacionDetalle from './pages/ProyectoInvestigacionDetalle.j
 import AdminPanel from './pages/AdminPanel.jsx'
 import InstrumentoDetail from './components/InstrumentoDetail.jsx'
 import { INSTRUMENTOS_LIST as INITIAL_INSTRUMENTOS } from './data/instrumentos.js'
-import { VIDEOS_INTERES as INITIAL_VIDEOS } from './data/videosInteres.js'
 import { getSearchEntries, resolveSiteSearch } from './data/siteSearch.js'
+import { EVENTOS_STATIC } from './data/eventosStatic.js'
 import supabase from './supabase.js'
 import { authService } from './services/authServives.js'
 import { profileService, rolEsAdmin } from './services/profileService.js'
@@ -38,6 +39,8 @@ import { publicacionesAdminService } from './services/publicacionesAdminService.
 import { publicacionesService } from './services/publicacionesService.js'
 import { reaccionesAdminService } from './services/reaccionesAdminService.js'
 import { servicioSocialService } from './services/servicioSocialService.js'
+import { videosInteresService } from './services/videosInteresService.js'
+import { divulgacionArticulosService } from './services/divulgacionArticulosService.js'
 import {
   emptyFormDocente,
   docenteRowToForm,
@@ -50,7 +53,15 @@ import {
 } from './utils/adminForms.js'
 import { docenteRowToIntegranteUi } from './utils/integrantesMap.js'
 
-import inscripcionHeroSrc from './assets/InscripcionProyectos.jpeg'
+import {
+  HERO_CUERPO_ACADEMICO,
+  HERO_DIVULGACION,
+  HERO_INSCRIPCION,
+  HERO_INTERES,
+  HERO_PROYECTOS_INV,
+  HERO_PUBLICACION_DETALLE,
+  HERO_PUBLICACIONES,
+} from './data/pageHeroImages.js'
 
 function parseYoutubeId(raw) {
   const s = String(raw || '').trim()
@@ -175,6 +186,16 @@ function inscripcionDownloadFilename(fileUrl, titulo, kind) {
   if (kind === 'word') return `${base}.docx`
   if (kind === 'image') return `${base}.jpg`
   return base
+}
+
+function emptyFormArticulo() {
+  return {
+    titulo: '',
+    descripcion: '',
+    archivo_url: '',
+    archivo_path: '',
+    orden: '0',
+  }
 }
 
 async function inscripcionFetchAndSave(url, filename) {
@@ -512,11 +533,15 @@ function App() {
   const [projects, setProjects] = useState(INITIAL_PROYECTOS)
   const [integrantes, setIntegrantes] = useState(INITIAL_INTEGRANTES)
   const [instrumentos, setInstrumentos] = useState(() => [...INITIAL_INSTRUMENTOS])
-  const [videosInteres, setVideosInteres] = useState(() => [...INITIAL_VIDEOS])
+  const [videosInteres, setVideosInteres] = useState([])
   const [formInstrumento, setFormInstrumento] = useState({ key: '', label: '', desc: '' })
   const [editInstrumentKey, setEditInstrumentKey] = useState(null)
   const [formVideo, setFormVideo] = useState({ id: '', title: '', description: '' })
   const [editVideoId, setEditVideoId] = useState(null)
+  const [articulosDivulgacion, setArticulosDivulgacion] = useState([])
+  const [formArticulo, setFormArticulo] = useState(() => emptyFormArticulo())
+  const [editArticuloId, setEditArticuloId] = useState(null)
+  const [articuloArchivos, setArticuloArchivos] = useState({ pdf: null })
   const [formServicio, setFormServicio] = useState({
     nombre: '',
     matricula: '',
@@ -580,6 +605,7 @@ function App() {
   const [editPublicacionId, setEditPublicacionId] = useState(null)
   const [detailModal, setDetailModal] = useState({ open: false, type: null, item: null })
   const [grupoDetalleId, setGrupoDetalleId] = useState(null)
+  const [publicacionDetalleId, setPublicacionDetalleId] = useState(null)
   const [proyectoInvDetalleId, setProyectoInvDetalleId] = useState(null)
   const [proyectoInvDetalle, setProyectoInvDetalle] = useState({
     loading: false,
@@ -607,6 +633,13 @@ function App() {
     const mapped = (publicacionesFeed || []).map(publicacionToEventoUi)
     return mapped.length ? mapped : undefined
   }, [publicacionesFeed])
+
+  const publicacionDetalleItem = useMemo(() => {
+    if (!publicacionDetalleId) return null
+    const list =
+      eventosPublicados && eventosPublicados.length > 0 ? eventosPublicados : EVENTOS_STATIC
+    return list.find((e) => e.id === publicacionDetalleId) ?? null
+  }, [eventosPublicados, publicacionDetalleId])
 
   useEffect(() => {
     if (currentPage !== 'inscripcion') setInscripcionDocsFilter('')
@@ -717,6 +750,44 @@ function App() {
       cancelled = true
     }
   }, [user?.isAdmin])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const rows = user?.isAdmin
+          ? await videosInteresService.listarAdmin()
+          : await videosInteresService.listarParaSitio()
+        if (!cancelled) setVideosInteres(Array.isArray(rows) ? rows : [])
+      } catch (e) {
+        console.error(e)
+        if (!cancelled) setVideosInteres([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.isAdmin])
+
+  const syncArticulosDivulgacion = useCallback(async () => {
+    try {
+      const rows = user?.isAdmin
+        ? await divulgacionArticulosService.listarAdmin()
+        : await divulgacionArticulosService.listarParaSitio()
+      setArticulosDivulgacion(Array.isArray(rows) ? rows : [])
+    } catch (e) {
+      const msg = String(e?.message ?? e ?? '')
+      const quiet =
+        /404|42P01|not found|does not exist|schema cache|divulgacion_articulos/i.test(msg) ||
+        e?.code === 'PGRST205'
+      if (!quiet) console.error(e)
+      setArticulosDivulgacion([])
+    }
+  }, [user?.isAdmin])
+
+  useEffect(() => {
+    void syncArticulosDivulgacion()
+  }, [syncArticulosDivulgacion])
 
   useEffect(() => {
     if (currentPage === 'admin' && user && !user.isAdmin) {
@@ -897,6 +968,16 @@ function App() {
     if (page !== 'grupoDetalle') {
       setGrupoDetalleId(null)
     }
+    if (page !== 'publicacionDetalle') {
+      setPublicacionDetalleId(null)
+    }
+  }
+
+  const openPublicacionDetalle = (ev) => {
+    if (!ev?.id) return
+    setPublicacionDetalleId(ev.id)
+    setCurrentPage('publicacionDetalle')
+    setSidebarOpen(false)
   }
 
   const navigateToIntegranteDetalle = (persona) => {
@@ -1801,50 +1882,67 @@ function App() {
     setFormInstrumento({ key: '', label: '', desc: '' })
   }
 
-  const addVideo = () => {
-    const id = editVideoId || parseYoutubeId(formVideo.id)
-    if (!id) {
-      window.alert('Pegá un enlace de YouTube válido o el ID de 11 caracteres.')
-      return
-    }
+  const addVideo = async () => {
     if (!formVideo.title.trim()) {
       window.alert('El título es obligatorio.')
       return
     }
-    if (editVideoId) {
-      setVideosInteres((prev) =>
-        prev.map((v) =>
-          v.id === editVideoId
-            ? { id: editVideoId, title: formVideo.title.trim(), description: formVideo.description.trim() }
-            : v,
-        ),
-      )
-      setEditVideoId(null)
-    } else {
-      if (videosInteres.some((v) => v.id === id)) {
-        window.alert('Ese video ya está en la lista.')
-        return
+    try {
+      if (editVideoId) {
+        await videosInteresService.actualizarAdmin(editVideoId, {
+          title: formVideo.title.trim(),
+          description: formVideo.description.trim(),
+        })
+        setEditVideoId(null)
+      } else {
+        const ytId = parseYoutubeId(formVideo.id)
+        if (!ytId) {
+          window.alert('Pegá un enlace de YouTube válido o el ID de 11 caracteres.')
+          return
+        }
+        const rowYoutubeId = (v) =>
+          String(v.youtube_id || '').trim() ||
+          (/^[\w-]{11}$/.test(String(v.id)) ? String(v.id) : '')
+        if (videosInteres.some((v) => rowYoutubeId(v) === ytId)) {
+          window.alert('Ese video ya está en la lista.')
+          return
+        }
+        await videosInteresService.crearAdmin({
+          youtube_id: ytId,
+          title: formVideo.title.trim(),
+          description: formVideo.description.trim(),
+        })
       }
-      setVideosInteres((prev) => [
-        ...prev,
-        { id, title: formVideo.title.trim(), description: formVideo.description.trim() },
-      ])
+      const rows = await videosInteresService.listarAdmin()
+      setVideosInteres(Array.isArray(rows) ? rows : [])
+      setFormVideo({ id: '', title: '', description: '' })
+    } catch (e) {
+      window.alert(e.message || 'No se pudo guardar el video.')
     }
-    setFormVideo({ id: '', title: '', description: '' })
   }
 
-  const deleteVideo = (id) => {
+  const deleteVideo = async (id) => {
     if (!window.confirm('¿Quitar este video de «De interés»?')) return
-    setVideosInteres((prev) => prev.filter((v) => v.id !== id))
-    if (editVideoId === id) {
-      setEditVideoId(null)
-      setFormVideo({ id: '', title: '', description: '' })
+    try {
+      await videosInteresService.eliminarAdmin(id)
+      const rows = await videosInteresService.listarAdmin()
+      setVideosInteres(Array.isArray(rows) ? rows : [])
+      if (editVideoId === id) {
+        setEditVideoId(null)
+        setFormVideo({ id: '', title: '', description: '' })
+      }
+    } catch (e) {
+      window.alert(e.message || 'No se pudo eliminar el video.')
     }
   }
 
   const startEditVideo = (v) => {
     setEditVideoId(v.id)
-    setFormVideo({ id: v.id, title: v.title, description: v.description })
+    setFormVideo({
+      id: String(v.youtube_id || '').trim(),
+      title: v.title || '',
+      description: v.description || '',
+    })
   }
 
   const cancelEditVideo = () => {
@@ -1852,14 +1950,99 @@ function App() {
     setFormVideo({ id: '', title: '', description: '' })
   }
 
-  const openProyectoDetalle = async (proyecto) => {
-    try {
-      const row = await proyectosInvestigacionService.obtenerPublicoPorId(proyecto.id)
-      setDetailModal({ open: true, type: 'proyecto', item: mapProyectoDetalleUi(row) })
-    } catch (e) {
-      console.error(e)
-      setDetailModal({ open: true, type: 'proyecto', item: proyecto })
+  const saveArticuloAdmin = async () => {
+    if (!formArticulo.titulo?.trim()) {
+      window.alert('El título es obligatorio.')
+      return
     }
+    try {
+      let archivoUrl = String(formArticulo.archivo_url || '').trim()
+      let archivoPath = String(formArticulo.archivo_path || '').trim() || null
+
+      const id = editArticuloId || crypto.randomUUID()
+
+      if (articuloArchivos.pdf) {
+        const f = articuloArchivos.pdf
+        const lower = (f.name || '').toLowerCase()
+        if (!lower.endsWith('.pdf') && f.type !== 'application/pdf') {
+          window.alert('El documento debe ser un PDF.')
+          return
+        }
+        if (archivoPath) await removePublicFile(archivoPath)
+        const { path: p, publicUrl } = await uploadPublicFile({
+          path: `divulgacion/${id}/documento.pdf`,
+          file: articuloArchivos.pdf,
+        })
+        archivoPath = p
+        archivoUrl = publicUrl
+      }
+
+      if (!archivoUrl) {
+        window.alert('Subí un archivo PDF para el artículo.')
+        return
+      }
+
+      const payloadBase = {
+        titulo: formArticulo.titulo.trim(),
+        descripcion: String(formArticulo.descripcion || '').trim() || null,
+        archivo_url: archivoUrl,
+        archivo_path: archivoPath,
+        orden: Number(formArticulo.orden) || 0,
+        es_visible: true,
+      }
+
+      if (editArticuloId) {
+        await divulgacionArticulosService.actualizarAdmin(editArticuloId, payloadBase)
+      } else {
+        await divulgacionArticulosService.crearAdmin({ id, ...payloadBase, tipo: 'Artículo' })
+      }
+
+      await syncArticulosDivulgacion()
+      setEditArticuloId(null)
+      setFormArticulo(emptyFormArticulo())
+      setArticuloArchivos({ pdf: null })
+    } catch (e) {
+      window.alert(
+        e.message ||
+          'No se pudo guardar. Si la tabla no existe, ejecutá la migración SQL en Supabase (divulgacion_articulos).',
+      )
+    }
+  }
+
+  const deleteArticuloAdmin = async (id) => {
+    if (!window.confirm('¿Eliminar este artículo y sus archivos asociados?')) return
+    try {
+      const row = articulosDivulgacion.find((a) => a.id === id)
+      if (row?.archivo_path) await removePublicFile(row.archivo_path)
+      if (row?.portada_path) await removePublicFile(row.portada_path)
+      await divulgacionArticulosService.eliminarAdmin(id)
+      await syncArticulosDivulgacion()
+      if (editArticuloId === id) {
+        setEditArticuloId(null)
+        setFormArticulo(emptyFormArticulo())
+        setArticuloArchivos({ pdf: null })
+      }
+    } catch (e) {
+      window.alert(e.message || 'No se pudo eliminar.')
+    }
+  }
+
+  const startEditArticulo = (row) => {
+    setEditArticuloId(row.id)
+    setFormArticulo({
+      titulo: row.titulo || '',
+      descripcion: row.descripcion || '',
+      archivo_url: row.archivo_url || '',
+      archivo_path: row.archivo_path || '',
+      orden: String(row.orden ?? 0),
+    })
+    setArticuloArchivos({ pdf: null })
+  }
+
+  const cancelEditArticulo = () => {
+    setEditArticuloId(null)
+    setFormArticulo(emptyFormArticulo())
+    setArticuloArchivos({ pdf: null })
   }
 
   const openProyectoInvPagina = (proyecto) => {
@@ -2166,21 +2349,31 @@ function App() {
             eliminarReaccionAdmin={eliminarReaccionAdmin}
             subirImagenesPublicacion={subirImagenesPublicacion}
             quitarImagenPublicacion={quitarImagenPublicacion}
+            articulosDivulgacion={articulosDivulgacion}
+            formArticulo={formArticulo}
+            setFormArticulo={setFormArticulo}
+            editArticuloId={editArticuloId}
+            articuloArchivos={articuloArchivos}
+            setArticuloArchivos={setArticuloArchivos}
+            saveArticuloAdmin={saveArticuloAdmin}
+            deleteArticuloAdmin={deleteArticuloAdmin}
+            startEditArticulo={startEditArticulo}
+            cancelEditArticulo={cancelEditArticulo}
           />
         )}
 
         {currentPage === 'proyectos' && (
           <DivulgacionCientifica
-            projects={projects}
+            articulos={articulosDivulgacion}
+            heroSrc={HERO_DIVULGACION}
             onBack={() => goTo('inicio')}
-            onOpenProyecto={openProyectoDetalle}
           />
         )}
 
         {currentPage === 'proyectosInv' && (
           <ProyectosInvestigacion
             projects={projects}
-            heroSrc={inscripcionHeroSrc}
+            heroSrc={HERO_PROYECTOS_INV}
             onBackHome={() => goTo('inicio')}
             onOpenProject={openProyectoInvPagina}
           />
@@ -2199,7 +2392,7 @@ function App() {
           <div className="page-content page-inscripcion page-inscripcion-root">
             <section className="inscripcion-hero" aria-label="Cabecera de inscripción">
               <img
-                src={inscripcionHeroSrc}
+                src={HERO_INSCRIPCION}
                 alt=""
                 className="inscripcion-hero-photo"
               />
@@ -2313,7 +2506,7 @@ function App() {
         {currentPage === 'grupo' && (
           <CuerpoAcademico
             integrantes={integrantes}
-            heroSrc={inscripcionHeroSrc}
+            heroSrc={HERO_CUERPO_ACADEMICO}
             onBackHome={() => goTo('inicio')}
             onOpenIntegrante={navigateToIntegranteDetalle}
           />
@@ -2551,10 +2744,27 @@ function App() {
             )
           })()}
 
-        {currentPage === 'eventos' && <Eventos onBack={() => goTo('inicio')} events={eventosPublicados} user={user} />}
+        {currentPage === 'eventos' && (
+          <Eventos
+            onBack={() => goTo('inicio')}
+            onOpenPost={openPublicacionDetalle}
+            events={eventosPublicados}
+            user={user}
+            heroSrc={HERO_PUBLICACIONES}
+          />
+        )}
+
+        {currentPage === 'publicacionDetalle' && (
+          <PublicacionDetallePage
+            item={publicacionDetalleItem}
+            user={user}
+            onBack={() => goTo('eventos')}
+            heroSrc={HERO_PUBLICACION_DETALLE}
+          />
+        )}
 
         {currentPage === 'interes' && (
-          <Interes onBack={() => goTo('inicio')} videos={videosInteres} />
+          <Interes onBack={() => goTo('inicio')} videos={videosInteres} heroSrc={HERO_INTERES} />
         )}
 
         <DetailModal detail={detailModal} onClose={closeDetailModal} />

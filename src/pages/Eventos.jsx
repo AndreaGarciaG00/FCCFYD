@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import SearchBar from '../components/SearchBar.jsx'
-import DetailModal from '../components/DetailModal.jsx'
+import { HERO_PUBLICACIONES } from '../data/pageHeroImages.js'
 import { EVENTOS_STATIC } from '../data/eventosStatic.js'
+import { fixPublicStorageUrl } from '../services/storageService.js'
 import { publicacionesInteraccionService } from '../services/publicacionesInteraccionService.js'
 
 function inicioDia(fechaISO) {
@@ -38,40 +38,20 @@ function metaUnaLinea(hora, lugar) {
   const h = String(hora || '').trim()
   const l = String(lugar || '').trim()
   if (h && l) return `${h} · ${l}`
-  return h || l || '—'
+  return h || l || ''
 }
 
-export default function Eventos({ onBack, events = EVENTOS_STATIC, user = null }) {
+export default function Eventos({ onBack, onOpenPost, events = EVENTOS_STATIC, user = null, heroSrc }) {
   const [busqueda, setBusqueda] = useState('')
-  const [detalle, setDetalle] = useState(null)
-  const [likesCount, setLikesCount] = useState(0)
-  const [likedByMe, setLikedByMe] = useState(false)
-  const [comentarios, setComentarios] = useState([])
-  const [nuevoComentario, setNuevoComentario] = useState('')
-  const [socialLoading, setSocialLoading] = useState(false)
-  const [socialError, setSocialError] = useState('')
-  const [likeBusy, setLikeBusy] = useState(false)
-  const [commentBusy, setCommentBusy] = useState(false)
+  const hero = heroSrc || HERO_PUBLICACIONES
   const [socialById, setSocialById] = useState({})
 
-  const { proximos, pasados } = useMemo(() => {
-    const hoy = new Date()
-    hoy.setHours(0, 0, 0, 0)
-    const prox = []
-    const past = []
-    for (const e of events) {
-      const t = inicioDia(e.fechaISO)
-      if (t >= hoy) prox.push(e)
-      else past.push(e)
-    }
-    prox.sort((a, b) => inicioDia(a.fechaISO) - inicioDia(b.fechaISO))
-    past.sort((a, b) => inicioDia(b.fechaISO) - inicioDia(a.fechaISO))
-    return { proximos: prox, pasados: past }
-  }, [events])
+  const feedItems = useMemo(() => {
+    const list = events.filter((ev) => eventMatches(ev, busqueda))
+    return [...list].sort((a, b) => inicioDia(b.fechaISO) - inicioDia(a.fechaISO))
+  }, [events, busqueda])
 
-  const proximosF = useMemo(() => proximos.filter((ev) => eventMatches(ev, busqueda)), [proximos, busqueda])
-  const pasadosF = useMemo(() => pasados.filter((ev) => eventMatches(ev, busqueda)), [pasados, busqueda])
-  const sinResultados = busqueda.trim() && proximosF.length === 0 && pasadosF.length === 0
+  const sinResultados = busqueda.trim() && feedItems.length === 0
 
   const refreshCardSocial = async (publicacionId, perfilId) => {
     if (!publicacionId) return
@@ -89,12 +69,11 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC, user = null }
   }
 
   useEffect(() => {
-    const visible = [...proximosF, ...pasadosF]
-    if (!visible.length) return
+    if (!feedItems.length) return
     let cancelled = false
     ;(async () => {
       const entries = await Promise.all(
-        visible.map(async (ev) => {
+        feedItems.map(async (ev) => {
           try {
             const s = await refreshCardSocial(ev.id, user?.id)
             return [ev.id, s]
@@ -110,85 +89,7 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC, user = null }
     return () => {
       cancelled = true
     }
-  }, [proximosF, pasadosF, user?.id])
-
-  const cargarSocial = async (publicacionId, perfilId) => {
-    if (!publicacionId) return
-    setSocialLoading(true)
-    setSocialError('')
-    try {
-      const [reacciones, comments] = await Promise.all([
-        publicacionesInteraccionService.listarReacciones(publicacionId),
-        publicacionesInteraccionService.listarComentarios(publicacionId),
-      ])
-      setLikesCount(reacciones.length)
-      setLikedByMe(!!perfilId && reacciones.some((r) => r.perfil_id === perfilId))
-      setComentarios(comments)
-    } catch (e) {
-      setSocialError(e.message || 'No se pudieron cargar likes/comentarios.')
-      setLikesCount(0)
-      setLikedByMe(false)
-      setComentarios([])
-    } finally {
-      setSocialLoading(false)
-    }
-  }
-
-  const abrirDetalle = async (ev) => {
-    setDetalle(ev)
-    setNuevoComentario('')
-    setLikesCount(0)
-    setLikedByMe(false)
-    setComentarios([])
-    if (ev?.id) {
-      await cargarSocial(ev.id, user?.id)
-    }
-  }
-
-  const toggleLike = async () => {
-    if (!detalle?.id || likeBusy) return
-    if (!user?.id) {
-      window.alert('Inicia sesión para dar like.')
-      return
-    }
-    setLikeBusy(true)
-    setSocialError('')
-    try {
-      if (likedByMe) {
-        await publicacionesInteraccionService.quitarLike(detalle.id, user.id)
-      } else {
-        await publicacionesInteraccionService.darLike(detalle.id, user.id)
-      }
-      await cargarSocial(detalle.id, user.id)
-      await refreshCardSocial(detalle.id, user.id)
-    } catch (e) {
-      setSocialError(e.message || 'No se pudo actualizar el like.')
-    } finally {
-      setLikeBusy(false)
-    }
-  }
-
-  const enviarComentario = async () => {
-    if (!detalle?.id || commentBusy) return
-    if (!user?.id) {
-      window.alert('Inicia sesión para comentar.')
-      return
-    }
-    const texto = nuevoComentario.trim()
-    if (!texto) return
-    setCommentBusy(true)
-    setSocialError('')
-    try {
-      await publicacionesInteraccionService.crearComentario(detalle.id, user.id, texto)
-      setNuevoComentario('')
-      await cargarSocial(detalle.id, user.id)
-      await refreshCardSocial(detalle.id, user.id)
-    } catch (e) {
-      setSocialError(e.message || 'No se pudo publicar el comentario.')
-    } finally {
-      setCommentBusy(false)
-    }
-  }
+  }, [feedItems, user?.id])
 
   const toggleLikeCard = async (ev) => {
     if (!ev?.id) return
@@ -204,137 +105,146 @@ export default function Eventos({ onBack, events = EVENTOS_STATIC, user = null }
         await publicacionesInteraccionService.darLike(ev.id, user.id)
       }
       await refreshCardSocial(ev.id, user.id)
-      if (detalle?.id === ev.id) {
-        await cargarSocial(ev.id, user.id)
-      }
     } catch (e) {
       window.alert(e.message || 'No se pudo actualizar el like.')
     }
   }
 
   return (
-    <div className="page-content page-eventos">
-      <button type="button" className="back-home" onClick={onBack}>
-        ← Volver a inicio
-      </button>
+    <div className="page-content page-eventos page-eventos--fb page-eventos-root">
+      <section className="inscripcion-hero" aria-label="Cabecera Publicaciones">
+        <img src={hero} alt="" className="inscripcion-hero-photo" />
+        <div className="inscripcion-hero-scrim" aria-hidden />
+        <div className="inscripcion-hero-inner">
+          <button type="button" className="inscripcion-hero-back" onClick={onBack}>
+            ← Inicio
+          </button>
+          <h1 className="inscripcion-hero-title eventos-hero-title">Publicaciones</h1>
+          <p className="eventos-hero-tagline">Avisos, eventos y novedades de la FCCFyD.</p>
+          <div className="inscripcion-hero-search">
+            <label htmlFor="eventos-filter" className="visually-hidden">
+              Buscar publicaciones
+            </label>
+            <svg
+              className="inscripcion-hero-search-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              id="eventos-filter"
+              type="search"
+              className="inscripcion-hero-search-input"
+              placeholder="Buscar por título, fecha, lugar…"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </div>
+      </section>
+      <div className="inscripcion-hero-rule" aria-hidden />
 
-      <h1 className="page-title">Publicaciones</h1>
-
-      <div className="eventos-toolbar">
-        <SearchBar
-          className="site-search site-search--eventos"
-          placeholder="Buscar por nombre, lugar, tipo o fecha…"
-          ariaLabel="Buscar publicaciones"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
-
-      {sinResultados ? (
-        <p className="eventos-sin-resultados">Ninguna publicación coincide con «{busqueda.trim()}». Prueba otras palabras.</p>
-      ) : null}
-
-      <div className="eventos-stack">
-        <section className="eventos-panel" aria-labelledby="ev-prox">
-          <h2 id="ev-prox" className="eventos-panel-title">
-            Próximos
-          </h2>
-          {proximosF.length === 0 && !sinResultados ? (
-            <p className="eventos-panel-empty">No hay publicaciones futuras en esta lista.</p>
-          ) : null}
-          {proximosF.length > 0 ? (
-            <div className="eventos-cards-grid">
-              {proximosF.map((ev) => (
-                <EventoTarjeta
-                  key={ev.id}
-                  ev={ev}
-                  fechaCorta={formatoCorto(ev.fechaISO)}
-                  onAbrir={() => abrirDetalle(ev)}
-                  social={socialById[ev.id]}
-                  onLike={() => toggleLikeCard(ev)}
-                  onComentar={() => abrirDetalle(ev)}
-                />
-              ))}
-            </div>
-          ) : null}
-        </section>
-
-        {pasados.length > 0 ? (
-          <section className="eventos-panel" aria-labelledby="ev-pas">
-            <h2 id="ev-pas" className="eventos-panel-title">
-              Anteriores
-            </h2>
-            {pasadosF.length === 0 && !sinResultados ? (
-              <p className="eventos-panel-empty">No hay publicaciones pasadas que coincidan con la búsqueda.</p>
-            ) : null}
-            {pasadosF.length > 0 ? (
-              <div className="eventos-cards-grid">
-                {pasadosF.map((ev) => (
-                  <EventoTarjeta
-                    key={ev.id}
-                    ev={ev}
-                    fechaCorta={formatoCorto(ev.fechaISO)}
-                    onAbrir={() => abrirDetalle(ev)}
-                    social={socialById[ev.id]}
-                    onLike={() => toggleLikeCard(ev)}
-                    onComentar={() => abrirDetalle(ev)}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </section>
+      <div className="fb-feed-shell">
+        {sinResultados ? (
+          <p className="eventos-sin-resultados fb-feed-alert">
+            Ninguna publicación coincide con «{busqueda.trim()}». Prueba otras palabras.
+          </p>
         ) : null}
-      </div>
 
-      <DetailModal
-        detail={{ open: detalle != null, type: 'evento', item: detalle }}
-        onClose={() => setDetalle(null)}
-        eventoSocial={{
-          likesCount,
-          likedByMe,
-          comentarios,
-          nuevoComentario,
-          socialLoading,
-          socialError,
-          likeBusy,
-          commentBusy,
-          isAuthenticated: !!user?.id,
-        }}
-        onToggleEventoLike={toggleLike}
-        onChangeEventoComment={setNuevoComentario}
-        onSubmitEventoComment={enviarComentario}
-      />
+        <div className="fb-feed" role="feed" aria-busy="false">
+          {feedItems.length === 0 && !sinResultados ? (
+            <p className="fb-feed-empty">Aún no hay publicaciones.</p>
+          ) : null}
+          {feedItems.map((ev) => (
+            <FbPostFeedCard
+              key={ev.id}
+              ev={ev}
+              fechaCorta={formatoCorto(ev.fechaISO)}
+              social={socialById[ev.id]}
+              onOpen={() => onOpenPost?.(ev)}
+              onLike={() => toggleLikeCard(ev)}
+              onComentar={() => onOpenPost?.(ev)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
 
-function EventoTarjeta({ ev, fechaCorta, onAbrir, social, onLike, onComentar }) {
-  const src = ev.imagen || DEFAULT_IMG
+function FbPostFeedCard({ ev, fechaCorta, social, onOpen, onLike, onComentar }) {
+  const rawSrc = ev.imagen || DEFAULT_IMG
+  const src = fixPublicStorageUrl(rawSrc)
+  const meta = metaUnaLinea(ev.hora, ev.lugar)
+
+  const likes = social?.likesCount ?? 0
+  const comments = social?.commentsCount ?? 0
+
   return (
-    <button type="button" className="eventos-card" onClick={onAbrir} aria-label={`Ver detalles: ${ev.titulo}`}>
-      <div className="eventos-card-media">
-        <img className="eventos-card-img" src={src} alt="" loading="lazy" decoding="async" />
-        <span className="eventos-card-date">{fechaCorta}</span>
-      </div>
-      <div className="eventos-card-body">
-        <span className="eventos-card-badge">{ev.badge}</span>
-        <h3 className="eventos-card-title">{ev.titulo}</h3>
-        <p className="eventos-card-meta">{metaUnaLinea(ev.hora, ev.lugar)}</p>
-        <p className="eventos-card-snippet">{ev.resumen}</p>
-        <div className="eventos-card-social" onClick={(e) => e.stopPropagation()}>
+    <article className="fb-post-feed-card">
+      <header className="fb-post-feed-head">
+        <div className="fb-post-feed-avatar" aria-hidden>
+          F
+        </div>
+        <div className="fb-post-feed-meta">
+          <p className="fb-post-feed-author">FCCFyD · UJED</p>
+          <div className="fb-post-feed-row">
+            <span className="fb-post-feed-badge-pill">{ev.badge}</span>
+            <time className="fb-post-feed-date" dateTime={ev.fechaISO}>
+              {fechaCorta}
+            </time>
+          </div>
+        </div>
+      </header>
+
+      <button type="button" className="fb-post-feed-main" onClick={onOpen}>
+        <div className="fb-post-feed-media">
+          <img className="fb-post-feed-img" src={src} alt="" loading="lazy" decoding="async" />
+        </div>
+        <div className="fb-post-feed-body">
+          <h2 className="fb-post-feed-title">{ev.titulo}</h2>
+          {meta ? <p className="fb-post-feed-whenwhere">{meta}</p> : null}
+          {ev.resumen ? <p className="fb-post-feed-snippet">{ev.resumen}</p> : null}
+          <span className="fb-post-feed-more">Ver publicación completa</span>
+        </div>
+      </button>
+
+      <div className="fb-post-feed-engagement">
+        <div className="fb-post-feed-stats">
+          <span className="fb-post-feed-stat">
+            {likes === 1 ? '1 me gusta' : `${likes} me gusta`}
+          </span>
+          <span className="fb-post-feed-stat fb-post-feed-stat--right">
+            {comments === 1 ? '1 comentario' : `${comments} comentarios`}
+          </span>
+        </div>
+        <div className="fb-post-feed-actions" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            className={`eventos-card-social-btn ${social?.likedByMe ? 'is-liked' : ''}`}
+            className={`fb-post-feed-action-btn ${social?.likedByMe ? 'is-liked' : ''}`}
             onClick={onLike}
           >
-            {social?.likedByMe ? '❤️' : '🤍'} {social?.likesCount ?? 0}
+            <span className="fb-post-feed-action-ico" aria-hidden>
+              {social?.likedByMe ? '❤️' : '🤍'}
+            </span>
+            Me gusta
           </button>
-          <button type="button" className="eventos-card-social-btn" onClick={onComentar}>
-            💬 {social?.commentsCount ?? 0}
+          <button type="button" className="fb-post-feed-action-btn" onClick={onComentar}>
+            <span className="fb-post-feed-action-ico" aria-hidden>
+              💬
+            </span>
+            Comentar
           </button>
         </div>
-        <span className="eventos-card-cta">Ver detalles →</span>
       </div>
-    </button>
+    </article>
   )
 }

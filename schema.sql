@@ -200,3 +200,29 @@ CREATE TABLE public.servicio_social_registros (
   CONSTRAINT servicio_social_registros_pkey PRIMARY KEY (id),
   CONSTRAINT servicio_social_registros_perfil_id_fkey FOREIGN KEY (perfil_id) REFERENCES public.perfiles(id)
 );
+CREATE TABLE public.divulgacion_articulos (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  titulo text NOT NULL,
+  tipo text NOT NULL DEFAULT 'Artículo'::text,
+  descripcion text,
+  archivo_url text NOT NULL,
+  archivo_path text,
+  portada_url text,
+  portada_path text,
+  orden integer NOT NULL DEFAULT 0,
+  es_visible boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT divulgacion_articulos_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.videos_interes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  youtube_id text NOT NULL,
+  title text NOT NULL,
+  description text NOT NULL DEFAULT ''::text,
+  orden integer NOT NULL DEFAULT 0,
+  es_visible boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT videos_interes_pkey PRIMARY KEY (id)
+);

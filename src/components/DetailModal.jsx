@@ -100,6 +100,7 @@ export default function DetailModal({
             ) : null}
             <div className={`modal-body${item.foto_url ? ' modal-body--integrante' : ''}`}>
               <h2 className="modal-title">{item.nombre}</h2>
+              {item.grado_academico ? <p className="modal-text modal-text--grado">{item.grado_academico}</p> : null}
               <p className="modal-subtitle">{item.rol}</p>
               {item.descripcion_breve ? <p className="modal-text">{item.descripcion_breve}</p> : null}
               {!item.descripcion_breve && item.disciplina ? (

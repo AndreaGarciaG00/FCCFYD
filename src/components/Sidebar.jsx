@@ -11,6 +11,9 @@ function navTopIsActive(currentPage, key) {
   if (key === 'proyectosInv') {
     return currentPage === 'proyectosInv' || currentPage === 'proyectosInvDetalle'
   }
+  if (key === 'eventos') {
+    return currentPage === 'eventos' || currentPage === 'publicacionDetalle'
+  }
   return currentPage === key
 }
 

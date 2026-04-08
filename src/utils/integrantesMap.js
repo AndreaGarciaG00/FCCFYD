@@ -25,12 +25,18 @@ export function integranteRedesEntries(redes) {
 
 /** Mapea fila `docentes` al shape que usa la UI (tarjetas, sidebar y modal). */
 export function docenteRowToIntegranteUi(d) {
-  const grado = d.grado_academico && d.grado_academico !== '—' ? `${d.grado_academico} ` : ''
-  const nombre = `${grado}${d.nombres || ''} ${d.apellidos || ''}`.trim()
+  const gradoRaw =
+    d.grado_academico &&
+    String(d.grado_academico).trim() &&
+    String(d.grado_academico).trim() !== '—'
+      ? String(d.grado_academico).trim()
+      : ''
+  const nombre = `${d.nombres || ''} ${d.apellidos || ''}`.trim() || 'Sin nombre'
   const redes = d.redes_sociales && typeof d.redes_sociales === 'object' ? d.redes_sociales : {}
   return {
     id: d.id,
-    nombre: nombre || 'Sin nombre',
+    nombre,
+    grado_academico: gradoRaw,
     rol: d.cargo || 'Cuerpo académico',
     disciplina: d.area_trabajo || 'CIMOHU · FCCFyD',
     foto_url: d.foto_url || null,

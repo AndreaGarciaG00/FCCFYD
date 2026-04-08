@@ -1,6 +1,135 @@
 import { useMemo, useState } from 'react'
-import { esCorreoDocentePlaceholder } from '../utils/integrantesMap.js'
 import { fixPublicStorageUrl } from '../services/storageService.js'
+import { esCorreoDocentePlaceholder, integranteRedesEntries } from '../utils/integrantesMap.js'
+
+/* @refresh reset */
+
+function stopCardNavigate(e) {
+  e.stopPropagation()
+}
+
+function IconMail() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+      <path d="m22 6-10 7L2 6" />
+    </svg>
+  )
+}
+
+function IconCv() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+    </svg>
+  )
+}
+
+function IconGlobe() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  )
+}
+
+const RED_MOD_KEYS = new Set(['linkedin', 'twitter', 'facebook', 'instagram', 'github'])
+
+function redSocialGlyph(networkKey) {
+  switch (networkKey) {
+    case 'linkedin':
+      return (
+        <span className="card-integrante-in" aria-hidden>
+          in
+        </span>
+      )
+    case 'twitter':
+      return (
+        <span className="card-integrante-network-letter" aria-hidden>
+          𝕏
+        </span>
+      )
+    case 'facebook':
+      return (
+        <span className="card-integrante-network-letter card-integrante-network-letter--fb" aria-hidden>
+          f
+        </span>
+      )
+    case 'instagram':
+      return (
+        <span className="card-integrante-network-letter card-integrante-network-letter--ig" aria-hidden>
+          IG
+        </span>
+      )
+    case 'github':
+      return (
+        <span className="card-integrante-network-letter" aria-hidden>
+          G
+        </span>
+      )
+    default:
+      return <IconGlobe />
+  }
+}
+
+function IntegranteCardLinks({ integrante }) {
+  const mailOk = integrante.correo && !esCorreoDocentePlaceholder(integrante.correo)
+  const redes = integranteRedesEntries(integrante.redes_sociales)
+  const cvUrl = integrante.cv_url ? fixPublicStorageUrl(integrante.cv_url) : ''
+
+  if (!mailOk && !redes.length && !cvUrl) return null
+
+  return (
+    <>
+      <div className="card-integrante-spacer" aria-hidden />
+      <div className="card-integrante-icons">
+      {mailOk ? (
+        <a
+          href={`mailto:${integrante.correo}`}
+          className="card-integrante-icon-link card-integrante-icon-link--mail"
+          aria-label={`Correo: ${integrante.correo}`}
+          title="Correo"
+          onClick={stopCardNavigate}
+        >
+          <IconMail />
+        </a>
+      ) : null}
+      {cvUrl ? (
+        <a
+          href={cvUrl}
+          className="card-integrante-icon-link card-integrante-icon-link--cv"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Ver CV"
+          title="CV"
+          onClick={stopCardNavigate}
+        >
+          <IconCv />
+        </a>
+      ) : null}
+      {redes.map(({ key, url, label }) => {
+        const mod = RED_MOD_KEYS.has(key) ? ` card-integrante-icon-link--${key}` : ''
+        return (
+          <a
+            key={key}
+            href={url}
+            className={`card-integrante-icon-link${mod}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={label}
+            title={label}
+            onClick={stopCardNavigate}
+          >
+            {redSocialGlyph(key)}
+          </a>
+        )
+      })}
+      </div>
+    </>
+  )
+}
 
 function norm(s) {
   return String(s || '')
@@ -12,7 +141,9 @@ function norm(s) {
 function integranteMatches(p, qRaw) {
   const q = norm(qRaw.trim())
   if (!q) return true
-  const blob = norm([p.nombre, p.rol, p.disciplina, p.correo].join(' '))
+  const blob = norm(
+    [p.nombre, p.rol, p.disciplina, p.correo, p.grado_academico, p.descripcion_breve].join(' '),
+  )
   return blob.includes(q)
 }
 
@@ -63,7 +194,7 @@ export default function CuerpoAcademico({ integrantes = [], heroSrc, onBackHome,
               id="cuerpo-academico-filter"
               type="search"
               className="inscripcion-hero-search-input"
-              placeholder="Buscar por nombre, cargo o área…"
+              placeholder="Buscar por nombre o cargo…"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               autoComplete="off"
@@ -105,40 +236,8 @@ export default function CuerpoAcademico({ integrantes = [], heroSrc, onBackHome,
                   <div className="card-integrante-avatar" aria-hidden />
                 )}
                 <h3 className="card-integrante-nombre">{p.nombre}</h3>
-                <p className="card-integrante-rol">{p.rol}</p>
-                <p className="card-integrante-disciplina">{p.disciplina}</p>
-                <div className="card-integrante-icons">
-                  {p.correo && !esCorreoDocentePlaceholder(p.correo) ? (
-                    <a
-                      href={`mailto:${p.correo}`}
-                      className="card-integrante-icon-link"
-                      aria-label={`Correo: ${p.correo}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      ✉
-                    </a>
-                  ) : (
-                    <span className="card-integrante-icon-link card-integrante-icon-link--disabled" aria-hidden>
-                      ✉
-                    </span>
-                  )}
-                  {p.redes_sociales?.linkedin && String(p.redes_sociales.linkedin).trim().startsWith('http') ? (
-                    <a
-                      href={String(p.redes_sociales.linkedin).trim()}
-                      className="card-integrante-icon-link"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="LinkedIn"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      in
-                    </a>
-                  ) : (
-                    <span className="card-integrante-icon-link card-integrante-icon-link--disabled" aria-hidden>
-                      in
-                    </span>
-                  )}
-                </div>
+                {p.rol ? <p className="card-integrante-rol">{p.rol}</p> : null}
+                <IntegranteCardLinks integrante={p} />
               </article>
             ))}
           </div>

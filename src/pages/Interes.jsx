@@ -1,11 +1,19 @@
 import { useMemo, useState } from 'react'
-import SearchBar from '../components/SearchBar.jsx'
+import { HERO_INTERES } from '../data/pageHeroImages.js'
 import { youtubeThumbUrl } from '../data/videosInteres.js'
 
-function VideoCard({ id, title, description }) {
+function youtubeIdFromRow(v) {
+  const y = String(v?.youtube_id || '').trim()
+  if (y) return y
+  const id = String(v?.id || '').trim()
+  if (/^[\w-]{11}$/.test(id)) return id
+  return ''
+}
+
+function VideoCard({ videoId, title, description }) {
   const [playing, setPlaying] = useState(false)
-  const thumb = youtubeThumbUrl(id, 'hqdefault')
-  const thumbFallback = youtubeThumbUrl(id, 'mqdefault')
+  const thumb = youtubeThumbUrl(videoId, 'hqdefault')
+  const thumbFallback = youtubeThumbUrl(videoId, 'mqdefault')
 
   return (
     <article className="interes-video-card">
@@ -36,7 +44,7 @@ function VideoCard({ id, title, description }) {
           <div className="interes-video-embed">
             <iframe
               title={title}
-              src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`}
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
@@ -48,7 +56,7 @@ function VideoCard({ id, title, description }) {
         <p className="interes-video-desc">{description}</p>
         <a
           className="interes-video-link"
-          href={`https://www.youtube.com/watch?v=${id}`}
+          href={`https://www.youtube.com/watch?v=${videoId}`}
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -59,8 +67,14 @@ function VideoCard({ id, title, description }) {
   )
 }
 
-export default function Interes({ onBack, videos = [] }) {
+export default function Interes({ onBack, videos = [], heroSrc }) {
   const [busqueda, setBusqueda] = useState('')
+  const hero = heroSrc || HERO_INTERES
+
+  const videosConYoutube = useMemo(
+    () => videos.filter((v) => Boolean(youtubeIdFromRow(v))),
+    [videos],
+  )
 
   const videosFiltrados = useMemo(() => {
     const q = String(busqueda || '')
@@ -68,45 +82,81 @@ export default function Interes({ onBack, videos = [] }) {
       .toLowerCase()
       .normalize('NFD')
       .replace(/\p{M}/gu, '')
-    if (!q) return videos
+    if (!q) return videosConYoutube
     const norm = (s) =>
       String(s || '')
         .toLowerCase()
         .normalize('NFD')
         .replace(/\p{M}/gu, '')
-    return videos.filter((v) => {
-      const blob = norm([v.title, v.description, v.id].join(' '))
+    return videosConYoutube.filter((v) => {
+      const yt = youtubeIdFromRow(v)
+      const blob = norm([v.title, v.description, yt, v.id].join(' '))
       return blob.includes(q)
     })
-  }, [videos, busqueda])
+  }, [videosConYoutube, busqueda])
 
   return (
-    <div className="page-content page-interes">
-      {onBack && (
-        <button type="button" className="back-home" onClick={onBack}>
-          ← Volver a inicio
-        </button>
-      )}
-      <h1 className="page-title">De interés</h1>
-      <p className="page-subtitle page-interes-lead">
-        Material audiovisual y recursos útiles para la comunidad FCCFyD.
-      </p>
-      <div className="interes-toolbar">
-        <SearchBar
-          className="site-search site-search--interes"
-          placeholder="Buscar video por título o tema…"
-          ariaLabel="Buscar en De interés"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
-      {videosFiltrados.length === 0 ? (
-        <p className="interes-vacio">No hay videos que coincidan con «{busqueda.trim()}».</p>
-      ) : null}
-      <div className="interes-videos-grid">
-        {videosFiltrados.map((v) => (
-          <VideoCard key={v.id} id={v.id} title={v.title} description={v.description} />
-        ))}
+    <div className="page-content page-interes page-interes-root">
+      <section className="inscripcion-hero" aria-label="Cabecera De interés">
+        <img src={hero} alt="" className="inscripcion-hero-photo" />
+        <div className="inscripcion-hero-scrim" aria-hidden />
+        <div className="inscripcion-hero-inner">
+          <button type="button" className="inscripcion-hero-back" onClick={onBack}>
+            ← Inicio
+          </button>
+          <h1 className="inscripcion-hero-title interes-hero-title">De interés</h1>
+          <p className="interes-hero-tagline">
+            Material audiovisual y recursos útiles para la comunidad FCCFyD.
+          </p>
+          <div className="inscripcion-hero-search">
+            <label htmlFor="interes-filter" className="visually-hidden">
+              Buscar videos
+            </label>
+            <svg
+              className="inscripcion-hero-search-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              id="interes-filter"
+              type="search"
+              className="inscripcion-hero-search-input"
+              placeholder="Buscar por título o tema…"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+        </div>
+      </section>
+      <div className="inscripcion-hero-rule" aria-hidden />
+
+      <div className="interes-body-wrap">
+        {videosFiltrados.length === 0 ? (
+          <p className="interes-vacio">
+            {busqueda.trim()
+              ? `No hay videos que coincidan con «${busqueda.trim()}».`
+              : 'Aún no hay videos en esta sección.'}
+          </p>
+        ) : null}
+        <div className="interes-videos-grid">
+          {videosFiltrados.map((v) => (
+            <VideoCard
+              key={v.id}
+              videoId={youtubeIdFromRow(v)}
+              title={v.title}
+              description={v.description}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -13,6 +13,7 @@ const TABS = [
   { id: 'comentarios', label: 'Comentarios', icon: '💬' },
   { id: 'instrumentos', label: 'Instrumentos de test', icon: '🧪' },
   { id: 'videos', label: 'De interés', icon: '🎬' },
+  { id: 'divulgacionArticulos', label: 'Divulgación científica', icon: '📄' },
   { id: 'codigos', label: 'Códigos de acceso', icon: '🔑' },
 ]
 
@@ -113,6 +114,16 @@ export default function AdminPanel({
   eliminarReaccionAdmin,
   subirImagenesPublicacion,
   quitarImagenPublicacion,
+  articulosDivulgacion = [],
+  formArticulo,
+  setFormArticulo,
+  editArticuloId,
+  articuloArchivos,
+  setArticuloArchivos,
+  saveArticuloAdmin,
+  deleteArticuloAdmin,
+  startEditArticulo,
+  cancelEditArticulo,
 }) {
   const [evalNueva, setEvalNueva] = useState({ slug: '', nombre: '', descripcion: '' })
   const [servicioDetalleId, setServicioDetalleId] = useState(null)
@@ -175,6 +186,15 @@ export default function AdminPanel({
           <div>
             <strong>{videosInteres.length}</strong>
             <span>Videos</span>
+          </div>
+        </div>
+        <div className="admin-v2-stat">
+          <span className="admin-v2-stat-icon" aria-hidden>
+            📄
+          </span>
+          <div>
+            <strong>{articulosDivulgacion.length}</strong>
+            <span>Divulgación científica</span>
           </div>
         </div>
         <div className="admin-v2-stat">
@@ -1572,7 +1592,7 @@ export default function AdminPanel({
                 <table className="admin-table admin-v2-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
+                      <th>YouTube</th>
                       <th>Título</th>
                       <th />
                     </tr>
@@ -1581,7 +1601,7 @@ export default function AdminPanel({
                     {videosInteres.map((v) => (
                       <tr key={v.id}>
                         <td>
-                          <code className="admin-v2-code">{v.id}</code>
+                          <code className="admin-v2-code">{v.youtube_id || v.id}</code>
                         </td>
                         <td>{v.title}</td>
                         <td className="admin-cell-actions">
@@ -1589,6 +1609,109 @@ export default function AdminPanel({
                             Editar
                           </button>
                           <button type="button" className="admin-btn-delete" onClick={() => deleteVideo(v.id)}>
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {adminSection === 'divulgacionArticulos' && (
+          <div className="admin-section admin-v2-section">
+            <div className="admin-v2-card">
+              <h2 className="admin-v2-card-title">{editArticuloId ? 'Editar artículo' : 'Nuevo artículo'}</h2>
+              <p className="admin-v2-hint">
+                Un solo PDF: sirve como documento y como vista previa en la tarjeta pública.
+              </p>
+              <div className="admin-form-grid admin-v2-form">
+                <label className="admin-form-full">
+                  <span>Título</span>
+                  <input
+                    value={formArticulo.titulo}
+                    onChange={(e) => setFormArticulo((s) => ({ ...s, titulo: e.target.value }))}
+                    placeholder="Título del artículo o informe"
+                  />
+                </label>
+                <label className="admin-form-full">
+                  <span>Descripción breve</span>
+                  <textarea
+                    rows={3}
+                    value={formArticulo.descripcion ?? ''}
+                    onChange={(e) => setFormArticulo((s) => ({ ...s, descripcion: e.target.value }))}
+                    placeholder="Texto corto que aparece debajo del título en la galería (opcional)."
+                  />
+                </label>
+                <label>
+                  <span>Orden</span>
+                  <input
+                    type="number"
+                    value={formArticulo.orden}
+                    onChange={(e) => setFormArticulo((s) => ({ ...s, orden: e.target.value }))}
+                  />
+                </label>
+                <label className="admin-form-full">
+                  <span>Archivo PDF {editArticuloId ? '(dejar vacío para conservar el actual)' : ''}</span>
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={(e) =>
+                      setArticuloArchivos((s) => ({ ...s, pdf: e.target.files?.[0] || null }))
+                    }
+                  />
+                  {articuloArchivos.pdf ? (
+                    <span className="admin-v2-hint">Seleccionado: {articuloArchivos.pdf.name}</span>
+                  ) : null}
+                  {editArticuloId && formArticulo.archivo_url ? (
+                    <span className="admin-v2-hint">
+                      Actual:{' '}
+                      <a href={fixPublicStorageUrl(formArticulo.archivo_url)} target="_blank" rel="noopener noreferrer">
+                        ver PDF
+                      </a>
+                    </span>
+                  ) : null}
+                </label>
+              </div>
+              <div className="admin-form-actions">
+                <button type="button" className="btn btn-primary admin-v2-btn-primary" onClick={saveArticuloAdmin}>
+                  {editArticuloId ? 'Guardar cambios' : 'Publicar artículo'}
+                </button>
+                {editArticuloId ? (
+                  <button type="button" className="btn btn-ghost" onClick={cancelEditArticulo}>
+                    Cancelar
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div className="admin-v2-card">
+              <h2 className="admin-v2-card-title">Materiales de divulgación científica</h2>
+              <div className="admin-table-wrap admin-v2-table-wrap">
+                <table className="admin-table admin-v2-table">
+                  <thead>
+                    <tr>
+                      <th>Título</th>
+                      <th>Orden</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {articulosDivulgacion.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.titulo}</td>
+                        <td>{row.orden}</td>
+                        <td className="admin-cell-actions">
+                          <button type="button" className="admin-btn-edit" onClick={() => startEditArticulo(row)}>
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-btn-delete"
+                            onClick={() => deleteArticuloAdmin(row.id)}
+                          >
                             Eliminar
                           </button>
                         </td>

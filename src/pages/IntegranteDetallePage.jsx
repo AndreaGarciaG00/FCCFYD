@@ -44,6 +44,9 @@ export default function IntegranteDetallePage({ integrante, onBack }) {
         )}
         <div className="integrante-detalle-body">
           <h1 className="integrante-detalle-nombre">{integrante.nombre}</h1>
+          {integrante.grado_academico ? (
+            <p className="integrante-detalle-grado">{integrante.grado_academico}</p>
+          ) : null}
           <p className="integrante-detalle-rol">{integrante.rol}</p>
           <p className="integrante-detalle-disciplina">{integrante.disciplina}</p>
 
